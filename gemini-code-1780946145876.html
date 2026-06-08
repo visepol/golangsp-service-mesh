@@ -247,8 +247,8 @@
             
             <header class="presentation__header">
                 <div class="flex items-center gap-2">
-                    <img src="https://go.dev/images/gophers/pilot-bust.svg" alt="Go Gopher" style="height:28px;width:auto;">
-                    <span class="font-bold text-secondary text-sm tracking-widest uppercase">GolangSP</span>
+                    <img src="https://go.dev/images/gophers/pilot-bust.svg" alt="Go Gopher" style="height:36px;width:auto;">
+                    <span class="font-bold text-secondary tracking-widest uppercase" style="font-size:18px;">GolangSP</span>
                 </div>
             </header>
 
@@ -263,7 +263,6 @@
                         <h1 class="text-6xl font-black tracking-tight mb-6">Conexões Persistentes em Go</h1>
                         <h2 class="text-3xl text-secondary font-medium mb-12">Controlando o Tráfego com <span class="highlight-text font-bold">Service Mesh</span></h2>
                         <div class="mt-8 text-lg font-bold">Vinicius Lopes</div>
-                        <div class="text-sm text-muted">GolangSP</div>
                     </div>
                 </section>
 
@@ -278,7 +277,7 @@
                                 <p class="text-secondary text-lg">Um request por conexão.<br>Overhead alto de handshakes TCP/TLS para cada chamada.</p>
                             </div>
                             <div class="comparison-card" style="border-top: 4px solid var(--stone-primary);">
-                                <h3 class="text-2xl font-bold mb-4 highlight-text">HTTP/2 (Padrão Go)</h3>
+                                <h3 class="text-2xl font-bold mb-4 highlight-text">HTTP/2</h3>
                                 <i class="ph ph-stack text-5xl mb-4 highlight-text"></i>
                                 <p class="text-secondary text-lg">Multiplexação. Vários requests fluindo paralelamente sobre uma <span class="font-bold">única conexão TCP</span>.</p>
                             </div>
@@ -796,7 +795,9 @@ spec:
                 this.slides = App.utils.$$(App.config.SELECTORS.SLIDES);
                 this.totalSlides = this.slides.length;
                 this.bindEvents();
-                this.showSlide(0);
+                const hashSlide = parseInt(window.location.hash.replace('#', '')) - 1;
+                const initialSlide = hashSlide >= 0 && hashSlide < this.totalSlides ? hashSlide : 0;
+                this.showSlide(initialSlide);
                 App.utils.$('#total-slides').textContent = this.totalSlides;
             },
             bindEvents() {
@@ -813,6 +814,7 @@ spec:
                 if (!App.utils.isValidSlide(index, this.totalSlides)) return;
                 this.slides.forEach((slide, i) => slide.classList.toggle('slide--active', i === index));
                 this.currentSlide = index;
+                window.location.hash = index + 1;
                 this.updateUI();
             },
             nextSlide() {
