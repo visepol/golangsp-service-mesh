@@ -601,20 +601,52 @@
                 <!-- Slide 8: Pilha OSI -->
                 <section class="slide text-center">
                     <div class="animated w-full max-w-6xl">
-                        <h2 class="text-4xl font-bold mb-4">Não é o proxy, é a camada.</h2>
-                        <p class="text-xl text-secondary mb-8">A pilha OSI define os limites do que a infraestrutura consegue ver.</p>
-                        
-                        <div class="pillars-grid max-w-4xl mx-auto">
-                            <div class="pillar-card opacity-50"><div class="font-bold">L1 - L3</div><div class="text-sm">Física, Enlace, Rede</div></div>
-                            <div class="pillar-card active border-blue-500">
-                                <div class="font-bold text-blue-600 text-xl">L4 (Transporte)</div>
-                                <div class="text-sm text-secondary mt-2">TCP/UDP. Onde o Nginx padrão e os Load Balancers da nuvem operam.</div>
+                        <h2 class="text-4xl font-bold mb-2">Não é o proxy, é a camada.</h2>
+                        <p class="text-xl mb-6" style="color:var(--text-secondary);">A pilha OSI define os limites do que a infraestrutura consegue ver.</p>
+
+                        <div class="flex flex-col gap-2 max-w-2xl mx-auto">
+
+                            <!-- L1 — dimmed -->
+                            <div class="flex items-center px-6 py-2 rounded-lg text-left" style="opacity:0.3;background:#F1F5F9;">
+                                <div class="text-sm font-medium">L1 — Física</div>
                             </div>
-                            <div class="pillar-card opacity-50"><div class="font-bold">L5 - L6</div><div class="text-sm">Sessão, Apresentação</div></div>
-                            <div class="pillar-card active border-stone-primary">
-                                <div class="font-bold text-stone-primary text-xl">L7 (Aplicação)</div>
-                                <div class="text-sm text-secondary mt-2">HTTP/gRPC. Enxerga headers, paths e requests individuais.</div>
+
+                            <!-- L2 — dimmed -->
+                            <div class="flex items-center px-6 py-2 rounded-lg text-left" style="opacity:0.3;background:#F1F5F9;">
+                                <div class="text-sm font-medium">L2 — Enlace</div>
                             </div>
+
+                            <!-- L3 — dimmed -->
+                            <div class="flex items-center px-6 py-2 rounded-lg text-left" style="opacity:0.3;background:#F1F5F9;">
+                                <div class="text-sm font-medium">L3 — Rede</div>
+                            </div>
+
+                            <!-- L4 — destaque slate -->
+                            <div class="flex items-center px-6 py-4 rounded-lg border-l-4 text-left" style="border-color:#475569;background:#F8FAFC;">
+                                <div>
+                                    <div class="font-bold text-lg" style="color:#475569;">L4 — Transporte</div>
+                                    <div class="text-sm" style="color:var(--text-secondary);">TCP/UDP — enxerga conexões</div>
+                                </div>
+                            </div>
+
+                            <!-- L5 — dimmed -->
+                            <div class="flex items-center px-6 py-2 rounded-lg text-left" style="opacity:0.3;background:#F1F5F9;">
+                                <div class="text-sm font-medium">L5 — Sessão</div>
+                            </div>
+
+                            <!-- L6 — dimmed -->
+                            <div class="flex items-center px-6 py-2 rounded-lg text-left" style="opacity:0.3;background:#F1F5F9;">
+                                <div class="text-sm font-medium">L6 — Apresentação</div>
+                            </div>
+
+                            <!-- L7 — destaque Go blue -->
+                            <div class="flex items-center px-6 py-4 rounded-lg border-l-4 text-left" style="border-color:var(--stone-primary);background:rgba(0,172,215,0.06);">
+                                <div>
+                                    <div class="font-bold text-lg" style="color:var(--stone-primary);">L7 — Aplicação</div>
+                                    <div class="text-sm" style="color:var(--text-secondary);">HTTP, gRPC — enxerga requests individuais</div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </section>
