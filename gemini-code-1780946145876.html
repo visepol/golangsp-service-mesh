@@ -426,19 +426,96 @@
                     }
                 </style>
 
-                <!-- Slide 5: Visão do L4 -->
+                <!-- Slide 5: O que o ingress enxerga -->
                 <section class="slide text-center">
                     <div class="animated w-full max-w-5xl">
-                        <h2 class="text-5xl font-bold mb-12">O que a infraestrutura enxerga</h2>
-                        <div class="comparison-grid items-center">
-                            <div class="text-left">
-                                <h3 class="text-2xl font-bold mb-4">A Perspectiva do Ingress (L4)</h3>
-                                <p class="text-lg text-secondary mb-4">Ele distribui <strong class="text-primary">conexões</strong>, não requests. Como há apenas 1 conexão HTTP/2 aberta, ela é roteada inteira para 1 pod.</p>
+                        <h2 class="text-5xl font-bold mb-8">O que o ingress enxerga</h2>
+
+                        <div class="comparison-grid items-stretch">
+
+                            <!-- Panel esquerdo: perspectiva do ingress -->
+                            <div class="flex flex-col items-center">
+                                <p class="text-xs font-bold uppercase tracking-widest mb-4" style="color:var(--text-secondary);">O ingress vê</p>
+
+                                <div class="w-full flex flex-col items-center rounded-2xl py-6 px-6" style="background:#F8FAFC; border:1px solid #E2E8F0; flex:1;">
+
+                                    <!-- Caixa superior: conexão opaca -->
+                                    <div class="flex items-center justify-center rounded-lg font-mono text-xs tracking-wider" style="background:#1E293B; color:#94A3B8; padding:10px 20px; min-width:180px;">
+                                        ━━ conexão TCP ━━
+                                    </div>
+
+                                    <div style="width:2px;height:16px;background:#CBD5E1;"></div>
+
+                                    <!-- Ingress -->
+                                    <div class="flex items-center justify-center bg-white rounded-lg font-mono text-sm shadow-sm border-2" style="border-color:var(--stone-primary); padding:10px 20px; min-width:180px;">ingress nginx</div>
+
+                                    <div style="width:2px;height:16px;background:#CBD5E1;"></div>
+
+                                    <!-- Pods -->
+                                    <div class="flex items-start justify-center gap-6 w-full">
+                                        <div class="flex flex-col items-center gap-1">
+                                            <div class="flex items-center justify-center font-mono text-sm font-bold text-white rounded-lg" style="background:var(--stone-primary); width:72px; padding:10px 0;">Pod 1</div>
+                                            <div class="font-mono text-xs font-bold" style="color:var(--stone-primary);">ativo</div>
+                                        </div>
+                                        <div class="flex flex-col items-center gap-1" style="opacity:0.3;">
+                                            <div class="flex items-center justify-center font-mono text-sm rounded-lg" style="background:#E2E8F0; color:#94A3B8; width:72px; padding:10px 0;">Pod 2</div>
+                                            <div class="font-mono text-xs" style="color:#94A3B8;">—</div>
+                                        </div>
+                                        <div class="flex flex-col items-center gap-1" style="opacity:0.3;">
+                                            <div class="flex items-center justify-center font-mono text-sm rounded-lg" style="background:#E2E8F0; color:#94A3B8; width:72px; padding:10px 0;">Pod 3</div>
+                                            <div class="font-mono text-xs" style="color:#94A3B8;">—</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="font-mono text-sm mt-3" style="color:var(--text-secondary);">1 conexão → 1 pod</p>
                             </div>
-                            <div class="p-8 bg-slate-100 rounded-xl border border-slate-200 relative">
-                                <div class="absolute -left-4 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-white rotate-45 border-l border-b border-slate-200"></div>
-                                <p class="text-xl font-mono text-slate-700">Conexão TCP #1982 → <span class="font-bold text-blue-600">Pod 1</span></p>
+
+                            <!-- Panel direito: dentro da conexão -->
+                            <div class="flex flex-col items-center">
+                                <p class="text-xs font-bold uppercase tracking-widest mb-4" style="color:var(--text-secondary);">Dentro da conexão</p>
+
+                                <div class="w-full flex flex-col items-center rounded-2xl py-6 px-6" style="background:#F8FAFC; border:1px solid #E2E8F0; flex:1;">
+
+                                    <!-- Caixa superior: requests visíveis -->
+                                    <div class="flex items-center justify-center gap-2 flex-wrap rounded-lg" style="border:1px dashed #93C5FD; background:#EFF6FF; padding:10px 16px; min-width:180px;">
+                                        <span class="font-mono text-xs" style="color:#3B82F6;">req 1</span>
+                                        <span class="font-mono text-xs" style="color:#3B82F6;">req 2</span>
+                                        <span class="font-mono text-xs" style="color:#3B82F6;">req 3</span>
+                                        <span class="font-mono text-xs" style="color:#3B82F6;">req 4</span>
+                                        <span class="font-mono text-xs" style="color:var(--text-muted);">···</span>
+                                    </div>
+
+                                    <div style="width:2px;height:16px;background:#CBD5E1;"></div>
+
+                                    <!-- Ingress (mesmo tamanho, mesmo estilo) -->
+                                    <div class="flex items-center justify-center bg-white rounded-lg font-mono text-sm shadow-sm border-2" style="border-color:var(--stone-primary); padding:10px 20px; min-width:180px;">ingress nginx</div>
+
+                                    <div style="width:2px;height:16px;background:#CBD5E1;"></div>
+
+                                    <!-- Pods -->
+                                    <div class="flex items-start justify-center gap-6 w-full">
+                                        <div class="flex flex-col items-center gap-1">
+                                            <div class="relative">
+                                                <div class="flex items-center justify-center font-mono text-sm font-bold text-white rounded-lg" style="background:var(--stone-primary); width:72px; padding:10px 0;">Pod 1</div>
+                                                <div class="absolute flex items-center justify-center text-white text-xs font-bold rounded-full" style="width:18px;height:18px;background:#EF4444;top:-7px;right:-7px;">!</div>
+                                            </div>
+                                            <div class="font-mono text-xs font-bold" style="color:#EF4444;">100%</div>
+                                        </div>
+                                        <div class="flex flex-col items-center gap-1" style="opacity:0.3;">
+                                            <div class="flex items-center justify-center font-mono text-sm rounded-lg" style="background:#E2E8F0; color:#94A3B8; width:72px; padding:10px 0;">Pod 2</div>
+                                            <div class="font-mono text-xs" style="color:#94A3B8;">ocioso</div>
+                                        </div>
+                                        <div class="flex flex-col items-center gap-1" style="opacity:0.3;">
+                                            <div class="flex items-center justify-center font-mono text-sm rounded-lg" style="background:#E2E8F0; color:#94A3B8; width:72px; padding:10px 0;">Pod 3</div>
+                                            <div class="font-mono text-xs" style="color:#94A3B8;">ocioso</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="font-mono text-sm mt-3" style="color:var(--text-secondary);">N requests → mesmo pod</p>
                             </div>
+
                         </div>
                     </div>
                 </section>
