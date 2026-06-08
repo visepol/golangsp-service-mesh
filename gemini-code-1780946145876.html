@@ -222,11 +222,10 @@
             z-index: 1000; transition: all 0.4s ease; padding-bottom: var(--space-2xl);
         }
         .footer[data-state="hidden"] { opacity: 0; transform: translateX(-50%) translateY(100%); pointer-events: none; }
-        .footer[data-state="minimal"] { opacity: 0.6; transform: translateX(-50%) translateY(50%); }
         .footer[data-state="full"] { opacity: 1; transform: translateX(-50%) translateY(0); }
         .footer__container {
-            padding: var(--space-sm) var(--space-lg); display: flex; align-items: center;
-            gap: var(--space-md); position: relative; transition: all 0.4s ease;
+            padding: var(--space-sm) var(--space-3xl); display: flex; align-items: center;
+            gap: var(--space-md); position: relative; transition: all 0.4s ease; min-width: 260px;
         }
         .slide-info {
             font-size: 0.75rem; color: var(--text-muted); font-weight: 500;
@@ -263,6 +262,7 @@
                         <h1 class="text-6xl font-black tracking-tight mb-6">Conexões Persistentes em Go</h1>
                         <h2 class="text-3xl text-secondary font-medium mb-12">Controlando o Tráfego com <span class="highlight-text font-bold">Service Mesh</span></h2>
                         <div class="mt-8 text-lg font-bold">Vinicius Lopes</div>
+                        <div class="text-sm mt-1" style="color:var(--text-secondary);">Software Engineer, Stone Co.</div>
                     </div>
                 </section>
 
@@ -564,9 +564,9 @@
                     .s6-line  { position:absolute; bottom:73px; left:0; right:0; opacity:0; pointer-events:none; z-index:10; }
 
                     /* Animações ativadas apenas quando o slide está ativo — reiniciam a cada navegação */
-                    .slide--active .s6-pod1  { animation: s6pod1  4s cubic-bezier(0.4,0,0.2,1) 0.3s both; }
-                    .slide--active .s6-pod23 { animation: s6pod23 4s cubic-bezier(0.4,0,0.2,1) 0.3s both; }
-                    .slide--active .s6-line  { animation: s6line  0.5s ease 4.5s forwards; }
+                    .slide--active .s6-pod1  { animation: s6pod1  3s cubic-bezier(0.4,0,0.2,1) 0.3s both; }
+                    .slide--active .s6-pod23 { animation: s6pod23 3s cubic-bezier(0.4,0,0.2,1) 0.3s both; }
+                    .slide--active .s6-line  { animation: s6line  0.5s ease 3.5s forwards; }
 
                     @keyframes s6pod1 {
                         0%   { height: 73px;  background: #94A3B8; }
@@ -1026,17 +1026,16 @@ spec:
                         
                         <div class="flex flex-col items-center justify-center gap-6">
                             <div class="p-4 bg-white rounded-xl shadow border border-slate-100">
-                                <!-- QR Placeholder style -->
-                                <i class="ph ph-qr-code text-9xl text-slate-800"></i>
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://dev.to/visepol/load-balancing-grpc-traffic-with-istio-1k49" alt="QR Code" width="200" height="200" style="display:block;">
                             </div>
-                            <div class="text-lg font-bold text-slate-500 uppercase tracking-widest mt-2">Artigo Base / YAMLs</div>
-                            
+                            <div class="text-lg font-bold text-slate-500 uppercase tracking-widest mt-2">Leia o artigo</div>
+
                             <div class="flex gap-8 mt-6">
                                 <div class="flex items-center gap-2 text-xl font-medium">
-                                    <i class="ph-fill ph-github-logo text-3xl"></i> @viniciuslopes
+                                    <i class="ph-fill ph-github-logo text-3xl text-slate-700"></i> @visepol
                                 </div>
                                 <div class="flex items-center gap-2 text-xl font-medium">
-                                    <i class="ph-fill ph-linkedin-logo text-3xl text-blue-600"></i> /in/viniciuslopes
+                                    <i class="ph-fill ph-linkedin-logo text-3xl text-slate-700"></i> /in/vinicius-lopes-eng
                                 </div>
                             </div>
                         </div>
@@ -1059,9 +1058,6 @@ spec:
                     </div>
                     <button class="btn btn--sm btn--primary" id="next-btn">
                         <i class="ph ph-caret-right"></i>
-                    </button>
-                    <button class="btn btn--sm btn--ghost" id="download-btn" title="Baixar apresentação">
-                        <i class="ph ph-download-simple"></i>
                     </button>
                 </div>
             </div>
@@ -1147,7 +1143,7 @@ spec:
             init() {
                 this.element = App.utils.$(App.config.SELECTORS.FOOTER);
                 this.bindEvents();
-                setTimeout(() => this.setState('minimal'), 500);
+                setTimeout(() => this.setState('hidden'), 500);
             },
             bindEvents() {
                 document.addEventListener('mousemove', (e) => { this.mouseY = e.clientY; this.updateVisibility(); });
@@ -1159,7 +1155,6 @@ spec:
                 const distanceFromBottom = window.innerHeight - this.mouseY;
                 clearTimeout(this.hideTimeout);
                 if (distanceFromBottom <= App.config.FOOTER.SHOW_THRESHOLD) this.setState('full');
-                else if (distanceFromBottom <= App.config.FOOTER.HIDE_THRESHOLD) this.setState('minimal');
                 else this.scheduleHide();
             },
             setState(newState) {
@@ -1175,6 +1170,7 @@ spec:
         App.download = {
             init() {
                 const downloadBtn = App.utils.$(App.config.SELECTORS.DOWNLOAD_BTN);
+                if (!downloadBtn) return;
                 downloadBtn.addEventListener('click', () => {
                     const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
                     const url = URL.createObjectURL(blob);
@@ -1193,7 +1189,7 @@ spec:
             init() {
                 const wrapper = App.utils.$('#presentation-wrapper');
                 const scale = () => {
-                    const scaleValue = Math.min(window.innerWidth / App.config.PRESENTATION.WIDTH, window.innerHeight / App.config.PRESENTATION.HEIGHT);
+                    const scaleValue = Math.min((window.innerWidth - 64) / App.config.PRESENTATION.WIDTH, (window.innerHeight - 32) / App.config.PRESENTATION.HEIGHT);
                     wrapper.style.transform = `scale(${scaleValue})`;
                     wrapper.style.left = `${(window.innerWidth - (App.config.PRESENTATION.WIDTH * scaleValue)) / 2}px`;
                     wrapper.style.top = `${(window.innerHeight - (App.config.PRESENTATION.HEIGHT * scaleValue)) / 2}px`;
