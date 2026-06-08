@@ -313,17 +313,93 @@
 
                 <!-- ARCO 2: Complication -->
 
-                <!-- Slide 4: A armadilha -->
+                <!-- Slide 4: Multiplexação revisitada -->
                 <section class="slide text-center">
-                    <div class="animated w-full max-w-5xl">
-                        <i class="ph-bold ph-warning-circle text-7xl text-status-warning mb-6"></i>
-                        <h2 class="text-5xl font-bold mb-6">A vantagem que vira armadilha</h2>
-                        <p class="text-2xl text-secondary leading-relaxed max-w-3xl mx-auto">
-                            Com HTTP/2, o handshake acontece <span class="keyword-highlight">apenas uma vez</span>.<br><br>
-                            Milhares de requests subsequentes do mesmo cliente usam a mesma conexão já estabelecida.
+                    <div class="w-full max-w-5xl">
+
+                        <!-- Título original -->
+                        <h2 class="text-4xl font-bold mb-3" style="opacity:0; animation: s4fade 0.4s ease forwards; animation-delay:0.05s;">A vantagem que vira armadilha</h2>
+
+                        <!-- Texto original compactado -->
+                        <p class="text-lg text-secondary mb-10" style="opacity:0; animation: s4fade 0.4s ease forwards; animation-delay:0.15s;">
+                            Com HTTP/2, o handshake acontece <span class="keyword-highlight" style="padding:2px 8px;">apenas uma vez</span> —
+                            requests subsequentes usam a mesma conexão já estabelecida.
                         </p>
+
+                        <!-- Timeline -->
+                        <div class="relative px-8" style="padding-bottom: 52px;">
+
+                            <!-- Horizontal line -->
+                            <div class="absolute left-8 right-8" style="top:16px; height:2px; background: rgba(0,0,0,0.1);"></div>
+
+                            <!-- Markers row -->
+                            <div class="flex items-start justify-between relative">
+
+                                <!-- Handshake marker -->
+                                <div style="opacity:0; animation: s4fade 0.5s ease forwards; animation-delay:0.3s;">
+                                    <div class="flex flex-col items-center">
+                                        <div style="width:32px;height:32px;border-radius:50%;background:var(--stone-primary);display:flex;align-items:center;justify-content:center;z-index:10;position:relative;">
+                                            <i class="ph-fill ph-lock-key text-white" style="font-size:14px;"></i>
+                                        </div>
+                                        <div style="margin-top:12px;">
+                                            <div class="font-bold text-sm" style="color:var(--stone-primary);">TLS Handshake</div>
+                                            <div class="font-mono text-xs text-muted mt-1">custo único</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Request 1 -->
+                                <div style="opacity:0; animation: s4fade 0.4s ease forwards; animation-delay:0.55s;">
+                                    <div class="flex flex-col items-center">
+                                        <div style="width:16px;height:16px;border-radius:50%;background:#E2E8F0;border:2px solid #94A3B8;margin-top:8px;position:relative;z-index:10;"></div>
+                                        <div class="font-mono text-xs text-secondary mt-3">Request 1</div>
+                                    </div>
+                                </div>
+
+                                <!-- Request 2 -->
+                                <div style="opacity:0; animation: s4fade 0.4s ease forwards; animation-delay:0.75s;">
+                                    <div class="flex flex-col items-center">
+                                        <div style="width:16px;height:16px;border-radius:50%;background:#E2E8F0;border:2px solid #94A3B8;margin-top:8px;position:relative;z-index:10;"></div>
+                                        <div class="font-mono text-xs text-secondary mt-3">Request 2</div>
+                                    </div>
+                                </div>
+
+                                <!-- Request 3 -->
+                                <div style="opacity:0; animation: s4fade 0.4s ease forwards; animation-delay:0.95s;">
+                                    <div class="flex flex-col items-center">
+                                        <div style="width:16px;height:16px;border-radius:50%;background:#E2E8F0;border:2px solid #94A3B8;margin-top:8px;position:relative;z-index:10;"></div>
+                                        <div class="font-mono text-xs text-secondary mt-3">Request 3</div>
+                                    </div>
+                                </div>
+
+                                <!-- Request 4 -->
+                                <div style="opacity:0; animation: s4fade 0.4s ease forwards; animation-delay:1.15s;">
+                                    <div class="flex flex-col items-center">
+                                        <div style="width:16px;height:16px;border-radius:50%;background:#E2E8F0;border:2px solid #94A3B8;margin-top:8px;position:relative;z-index:10;"></div>
+                                        <div class="font-mono text-xs text-secondary mt-3">Request 4</div>
+                                    </div>
+                                </div>
+
+                                <!-- N... -->
+                                <div style="opacity:0; animation: s4fade 0.4s ease forwards; animation-delay:1.35s;">
+                                    <div class="flex flex-col items-center">
+                                        <div class="font-mono font-bold text-muted" style="font-size:20px; letter-spacing:0.1em; margin-top:2px;">···</div>
+                                        <div class="font-mono text-xs text-muted mt-3">Request N</div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
                     </div>
                 </section>
+
+                <style>
+                    @keyframes s4fade {
+                        from { opacity: 0; transform: translateY(8px); }
+                        to   { opacity: 1; transform: translateY(0); }
+                    }
+                </style>
 
                 <!-- Slide 5: Visão do L4 -->
                 <section class="slide text-center">
