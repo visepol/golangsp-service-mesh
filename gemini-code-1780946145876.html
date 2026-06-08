@@ -981,25 +981,25 @@ spec:
                 <!-- Slide 21: O Contraste -->
                 <section class="slide text-center">
                     <div class="animated w-full max-w-5xl">
-                        <h2 class="text-5xl font-bold mb-12">O Impacto Arquitetural</h2>
+                        <h2 class="text-5xl font-bold mb-12">O contraste</h2>
                         <div class="comparison-grid">
                             <div class="comparison-card">
-                                <h3 class="text-2xl font-bold mb-6 text-red-500">Padrão K8s (L4)</h3>
+                                <h3 class="text-2xl font-bold mb-6 text-slate-600">Padrão K8s (L4)</h3>
                                 <div class="flex items-end justify-center gap-4 h-48 border-b border-slate-200">
-                                    <div class="w-16 bg-red-500 h-[100%] rounded-t-md"></div>
-                                    <div class="w-16 bg-slate-200 h-[5%] rounded-t-md"></div>
-                                    <div class="w-16 bg-slate-200 h-[5%] rounded-t-md"></div>
+                                    <div class="w-16 rounded-t-md" style="height:100%;background:#94A3B8;"></div>
+                                    <div class="w-16 rounded-t-md" style="height:5%;background:#E2E8F0;"></div>
+                                    <div class="w-16 rounded-t-md" style="height:5%;background:#E2E8F0;"></div>
                                 </div>
                                 <p class="mt-4 text-sm font-bold">1 Conexão = 1 Pod a 100%</p>
                             </div>
-                            <div class="comparison-card border-stone-primary">
+                            <div class="comparison-card" style="border-top: 4px solid var(--stone-primary);">
                                 <h3 class="text-2xl font-bold mb-6 highlight-text">Service Mesh (L7)</h3>
                                 <div class="flex items-end justify-center gap-4 h-48 border-b border-slate-200">
-                                    <div class="w-16 bg-stone-primary h-[60%] rounded-t-md"></div>
-                                    <div class="w-16 bg-green-400 h-[20%] rounded-t-md"></div>
-                                    <div class="w-16 bg-green-400 h-[20%] rounded-t-md"></div>
+                                    <div class="w-16 rounded-t-md" style="height:60%;background:var(--stone-primary);"></div>
+                                    <div class="w-16 rounded-t-md" style="height:20%;background:rgba(0,172,215,0.45);"></div>
+                                    <div class="w-16 rounded-t-md" style="height:20%;background:rgba(0,172,215,0.45);"></div>
                                 </div>
-                                <p class="mt-4 text-sm font-bold text-stone-primary">1 Conexão = Requests Distribuídos (60/20/20)</p>
+                                <p class="mt-4 text-sm font-bold highlight-text">1 Conexão = Requests Distribuídos (60/20/20)</p>
                             </div>
                         </div>
                     </div>
