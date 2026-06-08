@@ -896,29 +896,32 @@
                 <!-- Slide 18: YAML -->
                 <section class="slide text-center">
                     <div class="animated w-full max-w-4xl">
-                        <h2 class="text-3xl font-bold mb-6">Controle via YAML (VirtualService)</h2>
+                        <h2 class="text-3xl font-bold mb-6">Controle via YAML (DestinationRule + VirtualService)</h2>
                         <div class="code-block text-sm">
-apiVersion: networking.istio.io/v1alpha3
-kind: VirtualService
-metadata:
-  name: go-api-routing
+<span style="color:#94A3B8;"># DestinationRule</span>
+kind: DestinationRule
 spec:
-  hosts:
-  - "go-api.prod.svc.cluster.local"
+  host: go-api
+  trafficPolicy:
+    loadBalancer:
+      simple: ROUND_ROBIN
+  subsets:
+  - { name: v1, labels: { version: v1 } }
+  - { name: v2, labels: { version: v2 } }
+  - { name: v3, labels: { version: v3 } }
+---
+<span style="color:#94A3B8;"># VirtualService</span>
+kind: VirtualService
+spec:
+  hosts: [go-api]
   http:
   - route:
-    - destination:
-        host: go-api
-        subset: v1
-      <span class="font-bold text-stone-primary">weight: 60</span>
-    - destination:
-        host: go-api
-        subset: v2
-      <span class="font-bold text-stone-primary">weight: 20</span>
-    - destination:
-        host: go-api
-        subset: v3
-      <span class="font-bold text-stone-primary">weight: 20</span>
+    - destination: { host: go-api, subset: v1 }
+      <span class="font-bold highlight-text">weight: 60</span>
+    - destination: { host: go-api, subset: v2 }
+      <span class="font-bold highlight-text">weight: 20</span>
+    - destination: { host: go-api, subset: v3 }
+      <span class="font-bold highlight-text">weight: 20</span>
                         </div>
                     </div>
                 </section>
