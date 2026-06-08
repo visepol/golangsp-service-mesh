@@ -290,23 +290,49 @@
                     <div class="animated w-full max-w-5xl">
                         <h2 class="text-5xl font-bold mb-4">Go em Produção</h2>
                         <p class="text-xl text-secondary mb-12">O diagrama parece saudável e escalável horizontalmente.</p>
-                        
-                        <div class="flex items-center justify-center gap-8">
+
+                        <div class="flex items-center justify-center gap-6">
+
+                            <!-- Serviço A -->
                             <div class="text-center">
-                                <i class="ph-fill ph-users text-5xl text-secondary mb-2"></i>
-                                <div class="font-bold">Clientes</div>
+                                <div class="p-5 bg-white border-2 border-slate-200 rounded-xl shadow-sm flex flex-col items-center gap-2" style="min-width:120px;">
+                                    <i class="ph-fill ph-cube text-4xl text-secondary"></i>
+                                    <div class="font-bold text-sm">Serviço A</div>
+                                </div>
                             </div>
-                            <i class="ph-bold ph-arrow-right text-3xl text-muted"></i>
-                            <div class="p-6 bg-slate-100 rounded-lg border border-slate-200">
-                                <i class="ph-fill ph-hard-drives text-5xl highlight-text mb-2"></i>
-                                <div class="font-bold">Ingress Nginx</div>
+
+                            <div class="flex flex-col items-center gap-1">
+                                <span class="font-mono text-xs text-muted">HTTP/2</span>
+                                <i class="ph-bold ph-arrow-right text-2xl text-muted"></i>
                             </div>
-                            <i class="ph-bold ph-arrow-right text-3xl text-muted"></i>
-                            <div class="flex flex-col gap-4">
-                                <div class="p-4 bg-white border border-slate-200 rounded shadow-sm flex items-center gap-3"><i class="ph-fill ph-hexagon text-2xl text-blue-500"></i> Pod Go 1</div>
-                                <div class="p-4 bg-white border border-slate-200 rounded shadow-sm flex items-center gap-3"><i class="ph-fill ph-hexagon text-2xl text-blue-500"></i> Pod Go 2</div>
-                                <div class="p-4 bg-white border border-slate-200 rounded shadow-sm flex items-center gap-3"><i class="ph-fill ph-hexagon text-2xl text-blue-500"></i> Pod Go 3</div>
+
+                            <!-- Ingress Nginx -->
+                            <div class="text-center">
+                                <div class="p-5 bg-slate-100 border border-slate-200 rounded-xl flex flex-col items-center gap-2" style="min-width:130px;">
+                                    <i class="ph-fill ph-hard-drives text-4xl highlight-text"></i>
+                                    <div class="font-bold text-sm">Ingress Nginx</div>
+                                </div>
                             </div>
+
+                            <i class="ph-bold ph-arrow-right text-2xl text-muted"></i>
+
+                            <!-- Pods Serviço B -->
+                            <div class="border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col gap-3">
+                                <div class="text-xs font-bold text-muted uppercase tracking-widest text-center mb-1">Serviço B</div>
+                                <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-sm flex items-center gap-3" style="min-width:130px;">
+                                    <i class="ph-fill ph-cube text-xl highlight-text"></i>
+                                    <div class="font-bold text-sm">Pod 1</div>
+                                </div>
+                                <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-sm flex items-center gap-3" style="min-width:130px;">
+                                    <i class="ph-fill ph-cube text-xl highlight-text"></i>
+                                    <div class="font-bold text-sm">Pod 2</div>
+                                </div>
+                                <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-sm flex items-center gap-3" style="min-width:130px;">
+                                    <i class="ph-fill ph-cube text-xl highlight-text"></i>
+                                    <div class="font-bold text-sm">Pod 3</div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </section>
