@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Load Balancing com Service Mesh em Go - Vinicius Lopes</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        /* ===== DESIGN TOKENS ===== */
+        :root {
+            --stone-primary: #00AF55;
+            --stone-primary-rgb: 0, 175, 85;
+            --stone-primary-light: #C3FAAF;
+            --stone-primary-dark: #004132;
+            
+            --status-warning: #FFBF00;
+            --status-error: #D92D20;
+            --status-info: #3B82F6;
+            
+            --surface-body: #F8FAFC;
+            --surface-main: #FFFFFF;
+            --surface-glass: rgba(255, 255, 255, 0.8);
+            --surface-glass-hover: rgba(255, 255, 255, 0.95);
+            
+            --text-primary: #1F2937;
+            --text-secondary: rgba(31, 41, 55, 0.7);
+            --text-muted: rgba(31, 41, 55, 0.5);
+            
+            --space-xs: 0.25rem;
+            --space-sm: 0.5rem;
+            --space-md: 0.75rem;
+            --space-lg: 1rem;
+            --space-xl: 1.5rem;
+            --space-2xl: 2rem;
+            --space-3xl: 3rem;
+            
+            --duration-fast: 150ms;
+            --duration-normal: 300ms;
+            --duration-slow: 600ms;
+            --easing-default: cubic-bezier(0.4, 0, 0.2, 1);
+            
+            --presentation-width: 1280px;
+            --presentation-height: 720px;
+        }
+
+        /* ===== BASE ===== */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--surface-body);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .presentation {
+            width: var(--presentation-width);
+            height: var(--presentation-height);
+            transform-origin: top left;
+            transition: transform var(--duration-normal) var(--easing-default);
+        }
+
+        .presentation__container {
+            width: 100%;
+            height: 100%;
+            background: var(--surface-main);
+            border-radius: var(--space-lg);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
+        }
+
+        .presentation__header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: var(--space-xl);
+            z-index: 20;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .presentation__main {
+            flex: 1;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            inset: 0;
+            padding: var(--space-3xl) var(--space-2xl) var(--space-2xl);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity var(--duration-slow) var(--easing-default);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .slide--active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* ===== COMPONENTS ===== */
+        .highlight-text { color: var(--stone-primary); }
+        .keyword-highlight {
+            background-color: var(--stone-primary-dark);
+            color: var(--surface-main);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: 700;
+        }
+
+        .glass {
+            background: var(--surface-glass);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: var(--space-lg);
+        }
+
+        .btn {
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; border: 1px solid;
+            transition: all var(--duration-normal) var(--easing-default);
+            cursor: pointer; font-size: 0.875rem;
+        }
+        .btn--sm { width: var(--space-2xl); height: var(--space-2xl); }
+        .btn--primary {
+            background: rgba(var(--stone-primary-rgb), 0.1);
+            border-color: rgba(var(--stone-primary-rgb), 0.2);
+            color: var(--stone-primary);
+        }
+        .btn--primary:hover {
+            background: rgba(var(--stone-primary-rgb), 0.2);
+            transform: scale(1.05);
+        }
+        .btn--ghost {
+            background: var(--surface-glass);
+            border-color: rgba(0, 0, 0, 0.1);
+            color: var(--text-muted);
+        }
+
+        /* ===== LAYOUTS AVANÇADOS ===== */
+        .comparison-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2xl); width: 100%;
+        }
+        .comparison-card {
+            padding: var(--space-xl); border-radius: var(--space-lg);
+            background: var(--surface-body); border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .pillars-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-xl); margin-top: var(--space-xl);
+        }
+        .pillar-card {
+            padding: var(--space-xl); border-radius: var(--space-lg);
+            background: var(--surface-body); border: 1px solid rgba(0,0,0,0.05);
+            text-align: left;
+        }
+        .pillar-card.active { border-top: 4px solid var(--stone-primary); }
+
+        .terminal-window {
+            background: #0f172a;
+            border-radius: 12px;
+            border: 1px solid #1e293b;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: left;
+            font-family: 'JetBrains Mono', monospace;
+            color: #e2e8f0;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+        .terminal-header {
+            background: #1e293b;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot-red { background: #ef4444; }
+        .dot-yellow { background: #f59e0b; }
+        .dot-green { background: #22c55e; }
+        .terminal-body { padding: 24px; font-size: 1.1rem; line-height: 1.6; }
+
+        .code-block {
+            font-family: 'JetBrains Mono', monospace;
+            background: #f1f5f9;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            text-align: left;
+            font-size: 1rem;
+            color: #334155;
+            white-space: pre-wrap;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            z-index: 1000; transition: all 0.4s ease; padding-bottom: var(--space-2xl);
+        }
+        .footer[data-state="hidden"] { opacity: 0; transform: translateX(-50%) translateY(100%); pointer-events: none; }
+        .footer[data-state="minimal"] { opacity: 0.6; transform: translateX(-50%) translateY(50%); }
+        .footer[data-state="full"] { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .footer__container {
+            padding: var(--space-sm) var(--space-lg); display: flex; align-items: center;
+            gap: var(--space-md); position: relative; transition: all 0.4s ease;
+        }
+        .slide-info {
+            font-size: 0.75rem; color: var(--text-muted); font-weight: 500;
+            padding: 0 var(--space-md); text-align: center; background: rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 0, 0, 0.05); border-radius: var(--space-sm); min-width: 3rem;
+        }
+        .current-slide { color: var(--stone-primary); font-weight: 600; }
+
+        /* Animation */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .slide--active .animated { animation: fadeIn 0.8s ease-out forwards; }
+    </style>
+</head>
+<body>
+
+    <div class="presentation" id="presentation-wrapper">
+        <div class="presentation__container">
+            
+            <header class="presentation__header">
+                <div class="font-bold text-secondary text-sm tracking-widest uppercase">GolangSP</div>
+                <div class="font-bold text-stone-primary text-sm tracking-widest uppercase">Service Mesh</div>
+            </header>
+
+            <main class="presentation__main">
+                
+                <!-- ARCO 1: What Is -->
+                
+                <!-- Slide 1: Abertura -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <i class="ph-fill ph-plugs text-7xl mb-6" style="color: var(--stone-primary);"></i>
+                        <h1 class="text-6xl font-black tracking-tight mb-6">Conexões Persistentes em Go</h1>
+                        <h2 class="text-3xl text-secondary font-medium mb-12">Controlando o Tráfego com <span class="highlight-text font-bold">Service Mesh</span></h2>
+                        <div class="mt-8 text-lg font-bold">Vinicius Lopes</div>
+                        <div class="text-sm text-muted">GolangSP</div>
+                    </div>
+                </section>
+
+                <!-- Slide 2: O stack Go (HTTP/1.1 vs HTTP/2) -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-5xl font-bold mb-12">A evolução necessária</h2>
+                        <div class="comparison-grid">
+                            <div class="comparison-card">
+                                <h3 class="text-2xl font-bold mb-4">HTTP/1.1</h3>
+                                <i class="ph ph-arrows-left-right text-5xl text-muted mb-4"></i>
+                                <p class="text-secondary text-lg">Um request por conexão.<br>Overhead alto de handshakes TCP/TLS para cada chamada.</p>
+                            </div>
+                            <div class="comparison-card" style="border-top: 4px solid var(--stone-primary);">
+                                <h3 class="text-2xl font-bold mb-4 highlight-text">HTTP/2 (Padrão Go)</h3>
+                                <i class="ph ph-stack text-5xl mb-4 highlight-text"></i>
+                                <p class="text-secondary text-lg">Multiplexação. Vários requests fluindo paralelamente sobre uma <span class="font-bold">única conexão TCP</span>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 3: Arquitetura em Produção -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-5xl font-bold mb-4">Go em Produção</h2>
+                        <p class="text-xl text-secondary mb-12">O diagrama parece saudável e escalável horizontalmente.</p>
+                        
+                        <div class="flex items-center justify-center gap-8">
+                            <div class="text-center">
+                                <i class="ph-fill ph-users text-5xl text-secondary mb-2"></i>
+                                <div class="font-bold">Clientes</div>
+                            </div>
+                            <i class="ph-bold ph-arrow-right text-3xl text-muted"></i>
+                            <div class="p-6 bg-slate-100 rounded-lg border border-slate-200">
+                                <i class="ph-fill ph-hard-drives text-5xl highlight-text mb-2"></i>
+                                <div class="font-bold">Ingress Nginx</div>
+                            </div>
+                            <i class="ph-bold ph-arrow-right text-3xl text-muted"></i>
+                            <div class="flex flex-col gap-4">
+                                <div class="p-4 bg-white border border-slate-200 rounded shadow-sm flex items-center gap-3"><i class="ph-fill ph-hexagon text-2xl text-blue-500"></i> Pod Go 1</div>
+                                <div class="p-4 bg-white border border-slate-200 rounded shadow-sm flex items-center gap-3"><i class="ph-fill ph-hexagon text-2xl text-blue-500"></i> Pod Go 2</div>
+                                <div class="p-4 bg-white border border-slate-200 rounded shadow-sm flex items-center gap-3"><i class="ph-fill ph-hexagon text-2xl text-blue-500"></i> Pod Go 3</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ARCO 2: Complication -->
+
+                <!-- Slide 4: A armadilha -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <i class="ph-bold ph-warning-circle text-7xl text-status-warning mb-6"></i>
+                        <h2 class="text-5xl font-bold mb-6">A vantagem que vira armadilha</h2>
+                        <p class="text-2xl text-secondary leading-relaxed max-w-3xl mx-auto">
+                            Com HTTP/2, o handshake acontece <span class="keyword-highlight">apenas uma vez</span>.<br><br>
+                            Milhares de requests subsequentes do mesmo cliente usam a mesma conexão já estabelecida.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- Slide 5: Visão do L4 -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-5xl font-bold mb-12">O que a infraestrutura enxerga</h2>
+                        <div class="comparison-grid items-center">
+                            <div class="text-left">
+                                <h3 class="text-2xl font-bold mb-4">A Perspectiva do Ingress (L4)</h3>
+                                <p class="text-lg text-secondary mb-4">Ele distribui <strong class="text-primary">conexões</strong>, não requests. Como há apenas 1 conexão HTTP/2 aberta, ela é roteada inteira para 1 pod.</p>
+                            </div>
+                            <div class="p-8 bg-slate-100 rounded-xl border border-slate-200 relative">
+                                <div class="absolute -left-4 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-white rotate-45 border-l border-b border-slate-200"></div>
+                                <p class="text-xl font-mono text-slate-700">Conexão TCP #1982 → <span class="font-bold text-blue-600">Pod 1</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 6: O desequilíbrio -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-5xl font-bold mb-4">A realidade nos Pods</h2>
+                        <p class="text-xl text-secondary mb-12">A média de CPU de 33% esconde um problema crítico.</p>
+                        
+                        <div class="flex items-end justify-center gap-8 h-64 border-b-2 border-slate-200 pb-4">
+                            <div class="flex flex-col items-center gap-4 w-32">
+                                <div class="w-full bg-red-500 rounded-t-md transition-all h-[100%] flex items-start justify-center pt-2 text-white font-bold">100%</div>
+                                <div class="font-bold">Pod 1</div>
+                            </div>
+                            <div class="flex flex-col items-center gap-4 w-32">
+                                <div class="w-full bg-slate-200 rounded-t-md transition-all h-[5%]"></div>
+                                <div class="font-bold">Pod 2</div>
+                            </div>
+                            <div class="flex flex-col items-center gap-4 w-32">
+                                <div class="w-full bg-slate-200 rounded-t-md transition-all h-[5%]"></div>
+                                <div class="font-bold">Pod 3</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 7: Perguntas sem resposta -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <h2 class="text-5xl font-bold leading-tight mb-12">Escalar horizontalmente não resolve.<br>A conexão <span class="highlight-text">já está estabelecida</span>.</h2>
+                        <div class="space-y-6 text-2xl text-secondary text-left max-w-2xl mx-auto">
+                            <p>• Como distribuir os requests?</p>
+                            <p>• Como aplicar retries de forma inteligente?</p>
+                            <p>• Como ter métricas do que ocorre dentro da conexão?</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ARCO 3: Complication (Escalada) -->
+
+                <!-- Slide 8: Pilha OSI -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-6xl">
+                        <h2 class="text-4xl font-bold mb-4">Não é o proxy, é a camada.</h2>
+                        <p class="text-xl text-secondary mb-8">A pilha OSI define os limites do que a infraestrutura consegue ver.</p>
+                        
+                        <div class="pillars-grid max-w-4xl mx-auto">
+                            <div class="pillar-card opacity-50"><div class="font-bold">L1 - L3</div><div class="text-sm">Física, Enlace, Rede</div></div>
+                            <div class="pillar-card active border-blue-500">
+                                <div class="font-bold text-blue-600 text-xl">L4 (Transporte)</div>
+                                <div class="text-sm text-secondary mt-2">TCP/UDP. Onde o Nginx padrão e os Load Balancers da nuvem operam.</div>
+                            </div>
+                            <div class="pillar-card opacity-50"><div class="font-bold">L5 - L6</div><div class="text-sm">Sessão, Apresentação</div></div>
+                            <div class="pillar-card active border-stone-primary">
+                                <div class="font-bold text-stone-primary text-xl">L7 (Aplicação)</div>
+                                <div class="text-sm text-secondary mt-2">HTTP/gRPC. Enxerga headers, paths e requests individuais.</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 9: Visão L4 -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <i class="ph-bold ph-package text-7xl text-slate-400 mb-6"></i>
+                        <h2 class="text-4xl font-bold mb-6">O que o Ingress enxerga em L4</h2>
+                        <p class="text-2xl text-secondary max-w-2xl mx-auto mb-8">
+                            Ele entrega pacotes TCP baseados em IP e Porta. O conteúdo (HTTP/2) é um <span class="font-bold text-slate-800">bloco opaco</span> de bytes cifrados.
+                        </p>
+                        <div class="inline-block p-4 bg-slate-800 text-slate-300 font-mono text-sm rounded-lg">
+                            [ENCRYPTED TCP PAYLOAD 10101010...]
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 10: Conclusão do Arco -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <h2 class="text-6xl font-black leading-tight">
+                            Não é um erro de configuração.<br>
+                            É o <span class="keyword-highlight">limite da camada</span>.
+                        </h2>
+                    </div>
+                </section>
+
+                <!-- ARCO 4: STAR Moment (Demo 1) -->
+
+                <!-- Slide 11: Setup Demo 1 -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-4xl font-bold mb-8">Cenário da Demo #1: Produção Padrão</h2>
+                        
+                        <div class="terminal-window">
+                            <div class="terminal-header">
+                                <div class="terminal-dot dot-red"></div>
+                                <div class="terminal-dot dot-yellow"></div>
+                                <div class="terminal-dot dot-green"></div>
+                                <div class="ml-2 text-slate-400 text-sm">kubectl get pods</div>
+                            </div>
+                            <div class="terminal-body">
+                                NAME &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;READY &nbsp;&nbsp;STATUS &nbsp;&nbsp;&nbsp;AGE<br>
+                                go-api-6b47c9b8f-a1b2c &nbsp;&nbsp;&nbsp;1/1 &nbsp;&nbsp;&nbsp;&nbsp;Running &nbsp;&nbsp;10m<br>
+                                go-api-6b47c9b8f-x9y8z &nbsp;&nbsp;&nbsp;1/1 &nbsp;&nbsp;&nbsp;&nbsp;Running &nbsp;&nbsp;10m<br>
+                                go-api-6b47c9b8f-p3q4r &nbsp;&nbsp;&nbsp;1/1 &nbsp;&nbsp;&nbsp;&nbsp;Running &nbsp;&nbsp;10m
+                            </div>
+                        </div>
+                        <p class="mt-8 text-xl text-secondary">Aplicações Go respondendo com seu UUID interno.</p>
+                    </div>
+                </section>
+
+                <!-- Slide 12: Terminal Ao Vivo 1 -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <div class="terminal-window border-red-500/30 shadow-[0_0_50px_-12px_rgba(239,68,68,0.3)]">
+                            <div class="terminal-header">
+                                <div class="terminal-dot dot-red"></div>
+                                <div class="terminal-dot dot-yellow"></div>
+                                <div class="terminal-dot dot-green"></div>
+                                <div class="ml-2 text-slate-400 text-sm">cliente-http2-loop</div>
+                            </div>
+                            <div class="terminal-body text-red-400">
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span><br>
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span><br>
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span><br>
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span>
+                            </div>
+                        </div>
+                        <h3 class="mt-8 text-2xl font-bold text-status-error">Evidência: 100% da carga presa em um único pod.</h3>
+                    </div>
+                </section>
+
+                <!-- ARCO 5: What Could Be -->
+
+                <!-- Slide 13: A Mudança para L7 -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <h2 class="text-5xl font-black mb-12">L4 vs L7</h2>
+                        <div class="space-y-6 text-3xl font-medium text-left max-w-2xl mx-auto">
+                            <p class="text-slate-400">L4 enxerga a <span class="line-through">conexão</span>.</p>
+                            <p class="text-stone-primary">L7 enxerga o <span class="font-bold underline">request</span>.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 14: O que é Service Mesh -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-6xl">
+                        <h2 class="text-5xl font-bold mb-12">Service Mesh (Istio)</h2>
+                        <div class="comparison-grid">
+                            <div class="comparison-card text-left">
+                                <h3 class="text-2xl font-bold mb-4 highlight-text">Control Plane (Istiod)</h3>
+                                <ul class="list-disc pl-5 space-y-3 text-lg text-secondary">
+                                    <li>Interage com a API do Kubernetes</li>
+                                    <li>Injeta o proxy automaticamente</li>
+                                    <li>Distribui as regras de roteamento</li>
+                                </ul>
+                            </div>
+                            <div class="comparison-card text-left">
+                                <h3 class="text-2xl font-bold mb-4 text-blue-600">Data Plane (Envoy)</h3>
+                                <ul class="list-disc pl-5 space-y-3 text-lg text-secondary">
+                                    <li>Roda junto com a aplicação no pod</li>
+                                    <li>Intercepta todo o tráfego I/O</li>
+                                    <li>Opera em L7 — <strong>enxerga o request</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 15: Arquitetura Sidecar -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-4xl font-bold mb-8">Arquitetura de Sidecar (Por dentro do Pod)</h2>
+                        <div class="p-8 bg-white border border-slate-200 rounded-xl shadow-lg inline-block w-full max-w-3xl">
+                            <div class="text-left font-bold text-slate-400 mb-6 uppercase tracking-wider text-sm">Pod K8s Boundary</div>
+                            <div class="flex items-center justify-between gap-4">
+                                <div class="flex-1 p-6 bg-slate-50 border border-slate-200 rounded text-center">
+                                    <i class="ph-bold ph-app-window text-4xl text-slate-700 mb-2"></i>
+                                    <div class="font-bold">Seu App Go</div>
+                                    <div class="text-sm text-slate-500">Zero código alterado</div>
+                                </div>
+                                <div class="flex flex-col items-center">
+                                    <span class="text-xs font-bold text-stone-primary mb-1">iptables hijack</span>
+                                    <i class="ph-bold ph-arrows-left-right text-3xl text-stone-primary"></i>
+                                </div>
+                                <div class="flex-1 p-6 bg-green-50 border border-green-200 rounded text-center">
+                                    <i class="ph-bold ph-shield-check text-4xl text-stone-primary mb-2"></i>
+                                    <div class="font-bold text-stone-primary">Envoy Proxy</div>
+                                    <div class="text-sm text-green-700">Intercepta L7</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 16: Trade-offs -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-6xl">
+                        <h2 class="text-4xl font-bold mb-12">Não é over-engineering. É arquitetura.</h2>
+                        <div class="comparison-grid">
+                            <div class="comparison-card text-left bg-slate-50">
+                                <h3 class="text-xl font-bold mb-4 text-slate-500 uppercase tracking-wider text-sm">O que você paga</h3>
+                                <ul class="space-y-3 text-lg text-slate-600">
+                                    <li><i class="ph-bold ph-minus text-red-400 mr-2"></i> Sidecar por pod (CPU/Mem extra)</li>
+                                    <li><i class="ph-bold ph-minus text-red-400 mr-2"></i> Control plane no cluster</li>
+                                    <li><i class="ph-bold ph-minus text-red-400 mr-2"></i> Curva de aprendizado</li>
+                                </ul>
+                            </div>
+                            <div class="comparison-card text-left bg-green-50 border-green-200">
+                                <h3 class="text-xl font-bold mb-4 text-stone-primary uppercase tracking-wider text-sm">O que você ganha</h3>
+                                <ul class="space-y-3 text-lg text-slate-800 font-medium">
+                                    <li><i class="ph-bold ph-check text-stone-primary mr-2"></i> Load balancing por request</li>
+                                    <li><i class="ph-bold ph-check text-stone-primary mr-2"></i> mTLS automático</li>
+                                    <li><i class="ph-bold ph-check text-stone-primary mr-2"></i> Circuit breaking & Retry</li>
+                                    <li class="pt-2 text-stone-primary font-bold border-t border-green-200 mt-2">Sem tocar em 1 linha de código Go.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ARCO 6: Answer -->
+
+                <!-- Slide 17: Algoritmos -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-6xl">
+                        <h2 class="text-4xl font-bold mb-4">Algoritmos de Balanceamento em L7</h2>
+                        <p class="text-xl text-secondary mb-8">Aplicados diretamente nas conexões HTTP/2 ativas.</p>
+                        
+                        <div class="pillars-grid">
+                            <div class="pillar-card border-stone-primary border-2 shadow-md relative transform scale-105">
+                                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-stone-primary text-white text-xs font-bold px-3 py-1 rounded-full">DEMO</div>
+                                <h3 class="text-xl font-bold mb-2">ROUND_ROBIN</h3>
+                                <p class="text-secondary text-sm">Distribui sequencialmente por request. Aceita pesos.</p>
+                            </div>
+                            <div class="pillar-card">
+                                <h3 class="text-xl font-bold mb-2">LEAST_CONN</h3>
+                                <p class="text-secondary text-sm">Envia para o pod com menos requests ativos no momento.</p>
+                            </div>
+                            <div class="pillar-card">
+                                <h3 class="text-xl font-bold mb-2">RANDOM</h3>
+                                <p class="text-secondary text-sm">Distribuição aleatória padronizada.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 18: YAML -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <h2 class="text-3xl font-bold mb-6">Controle via YAML (VirtualService)</h2>
+                        <div class="code-block text-sm">
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: go-api-routing
+spec:
+  hosts:
+  - "go-api.prod.svc.cluster.local"
+  http:
+  - route:
+    - destination:
+        host: go-api
+        subset: v1
+      <span class="font-bold text-stone-primary">weight: 60</span>
+    - destination:
+        host: go-api
+        subset: v2
+      <span class="font-bold text-stone-primary">weight: 20</span>
+    - destination:
+        host: go-api
+        subset: v3
+      <span class="font-bold text-stone-primary">weight: 20</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ARCO 7: Answer -> New Bliss (Demo 2) -->
+
+                <!-- Slide 19: Setup Demo 2 -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-4xl font-bold mb-8">Cenário da Demo #2: Istio Injetado</h2>
+                        
+                        <div class="terminal-window">
+                            <div class="terminal-header">
+                                <div class="terminal-dot dot-red"></div>
+                                <div class="terminal-dot dot-yellow"></div>
+                                <div class="terminal-dot dot-green"></div>
+                                <div class="ml-2 text-slate-400 text-sm">kubectl get pods</div>
+                            </div>
+                            <div class="terminal-body">
+                                NAME &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;READY &nbsp;&nbsp;STATUS &nbsp;&nbsp;&nbsp;AGE<br>
+                                go-api-8f99d9b8f-a1b2c &nbsp;&nbsp;&nbsp;<span class="text-stone-primary font-bold">2/2</span> &nbsp;&nbsp;&nbsp;&nbsp;Running &nbsp;&nbsp;1m<br>
+                                go-api-8f99d9b8f-x9y8z &nbsp;&nbsp;&nbsp;<span class="text-stone-primary font-bold">2/2</span> &nbsp;&nbsp;&nbsp;&nbsp;Running &nbsp;&nbsp;1m<br>
+                                go-api-8f99d9b8f-p3q4r &nbsp;&nbsp;&nbsp;<span class="text-stone-primary font-bold">2/2</span> &nbsp;&nbsp;&nbsp;&nbsp;Running &nbsp;&nbsp;1m
+                            </div>
+                        </div>
+                        <p class="mt-8 text-xl text-secondary">Mesmos pods, mesmo código. Agora com 2 containers (App + Envoy).</p>
+                    </div>
+                </section>
+
+                <!-- Slide 20: Terminal Ao Vivo 2 -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <div class="terminal-window border-stone-primary/30 shadow-[0_0_50px_-12px_rgba(0,175,85,0.3)]">
+                            <div class="terminal-header">
+                                <div class="terminal-dot dot-red"></div>
+                                <div class="terminal-dot dot-yellow"></div>
+                                <div class="terminal-dot dot-green"></div>
+                                <div class="ml-2 text-slate-400 text-sm">cliente-http2-loop (com pesos 60/20/20)</div>
+                            </div>
+                            <div class="terminal-body text-green-400">
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span><br>
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-slate-400 font-bold">x9y8z</span><br>
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span><br>
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-slate-400 font-bold">p3q4r</span><br>
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span>
+                            </div>
+                        </div>
+                        <h3 class="mt-8 text-2xl font-bold highlight-text">Evidência: O tráfego foi perfeitamente distribuído em L7.</h3>
+                    </div>
+                </section>
+
+                <!-- Slide 21: O Contraste -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-5xl font-bold mb-12">O Impacto Arquitetural</h2>
+                        <div class="comparison-grid">
+                            <div class="comparison-card">
+                                <h3 class="text-2xl font-bold mb-6 text-red-500">Padrão K8s (L4)</h3>
+                                <div class="flex items-end justify-center gap-4 h-48 border-b border-slate-200">
+                                    <div class="w-16 bg-red-500 h-[100%] rounded-t-md"></div>
+                                    <div class="w-16 bg-slate-200 h-[5%] rounded-t-md"></div>
+                                    <div class="w-16 bg-slate-200 h-[5%] rounded-t-md"></div>
+                                </div>
+                                <p class="mt-4 text-sm font-bold">1 Conexão = 1 Pod a 100%</p>
+                            </div>
+                            <div class="comparison-card border-stone-primary">
+                                <h3 class="text-2xl font-bold mb-6 highlight-text">Service Mesh (L7)</h3>
+                                <div class="flex items-end justify-center gap-4 h-48 border-b border-slate-200">
+                                    <div class="w-16 bg-stone-primary h-[60%] rounded-t-md"></div>
+                                    <div class="w-16 bg-green-400 h-[20%] rounded-t-md"></div>
+                                    <div class="w-16 bg-green-400 h-[20%] rounded-t-md"></div>
+                                </div>
+                                <p class="mt-4 text-sm font-bold text-stone-primary">1 Conexão = Requests Distribuídos (60/20/20)</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ARCO 8: New Bliss / CTA -->
+
+                <!-- Slide 22: A Tese -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <i class="ph-fill ph-quotes text-7xl text-slate-300 mb-6"></i>
+                        <h2 class="text-5xl font-bold leading-tight mb-8">
+                            Seu código Go cuida da lógica de negócio.<br>
+                            A <span class="keyword-highlight">infraestrutura</span> cuida do tráfego.
+                        </h2>
+                        <p class="text-2xl text-secondary">A solução para roteamento, retry e resiliência não é mais código.</p>
+                    </div>
+                </section>
+
+                <!-- Slide 23: Referências -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <h2 class="text-4xl font-bold mb-12">Obrigado! Dúvidas?</h2>
+                        
+                        <div class="flex flex-col items-center justify-center gap-6">
+                            <div class="p-4 bg-white rounded-xl shadow border border-slate-100">
+                                <!-- QR Placeholder style -->
+                                <i class="ph ph-qr-code text-9xl text-slate-800"></i>
+                            </div>
+                            <div class="text-lg font-bold text-slate-500 uppercase tracking-widest mt-2">Artigo Base / YAMLs</div>
+                            
+                            <div class="flex gap-8 mt-6">
+                                <div class="flex items-center gap-2 text-xl font-medium">
+                                    <i class="ph-fill ph-github-logo text-3xl"></i> @viniciuslopes
+                                </div>
+                                <div class="flex items-center gap-2 text-xl font-medium">
+                                    <i class="ph-fill ph-linkedin-logo text-3xl text-blue-600"></i> /in/viniciuslopes
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+
+            <!-- Footer Navigation -->
+            <div class="footer" data-state="hidden">
+                <div class="footer__indicator"></div>
+                <div class="footer__container glass">
+                    <button class="btn btn--sm btn--primary" id="prev-btn">
+                        <i class="ph ph-caret-left"></i>
+                    </button>
+                    <div class="slide-info">
+                        <span class="current-slide" id="current-slide">1</span>
+                        <span class="divider">/</span>
+                        <span class="total-slides" id="total-slides">23</span>
+                    </div>
+                    <button class="btn btn--sm btn--primary" id="next-btn">
+                        <i class="ph ph-caret-right"></i>
+                    </button>
+                    <button class="btn btn--sm btn--ghost" id="download-btn" title="Baixar apresentação">
+                        <i class="ph ph-download-simple"></i>
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        const App = {
+            config: {
+                PRESENTATION: { WIDTH: 1280, HEIGHT: 720 },
+                FOOTER: { HIDE_THRESHOLD: 150, SHOW_THRESHOLD: 100, HIDE_DELAY: 2000 },
+                SELECTORS: {
+                    SLIDES: '.slide', FOOTER: '.footer',
+                    PREV_BTN: '#prev-btn', NEXT_BTN: '#next-btn', DOWNLOAD_BTN: '#download-btn'
+                }
+            }
+        };
+
+        App.utils = {
+            $: (selector) => document.querySelector(selector),
+            $$: (selector) => document.querySelectorAll(selector),
+            animate: {
+                scale(element, from = 1, to = 1.1, duration = 150) {
+                    element.style.transform = `scale(${from})`;
+                    element.style.transition = `transform ${duration}ms var(--easing-default)`;
+                    requestAnimationFrame(() => { element.style.transform = `scale(${to})`; });
+                }
+            },
+            isValidSlide(index, total) { return index >= 0 && index < total; }
+        };
+
+        App.navigation = {
+            currentSlide: 0, totalSlides: 0, slides: null,
+            init() {
+                this.slides = App.utils.$$(App.config.SELECTORS.SLIDES);
+                this.totalSlides = this.slides.length;
+                this.bindEvents();
+                this.showSlide(0);
+                App.utils.$('#total-slides').textContent = this.totalSlides;
+            },
+            bindEvents() {
+                const prevBtn = App.utils.$(App.config.SELECTORS.PREV_BTN);
+                const nextBtn = App.utils.$(App.config.SELECTORS.NEXT_BTN);
+                prevBtn.addEventListener('click', () => this.previousSlide());
+                nextBtn.addEventListener('click', () => this.nextSlide());
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowRight' || e.key === ' ') this.nextSlide();
+                    if (e.key === 'ArrowLeft') this.previousSlide();
+                });
+            },
+            showSlide(index) {
+                if (!App.utils.isValidSlide(index, this.totalSlides)) return;
+                this.slides.forEach((slide, i) => slide.classList.toggle('slide--active', i === index));
+                this.currentSlide = index;
+                this.updateUI();
+            },
+            nextSlide() {
+                const nextIndex = this.currentSlide < this.totalSlides - 1 ? this.currentSlide + 1 : 0;
+                this.showSlide(nextIndex);
+            },
+            previousSlide() {
+                if (this.currentSlide > 0) this.showSlide(this.currentSlide - 1);
+            },
+            updateUI() {
+                const prevBtn = App.utils.$(App.config.SELECTORS.PREV_BTN);
+                const nextBtn = App.utils.$(App.config.SELECTORS.NEXT_BTN);
+                const currentSlideSpan = App.utils.$('#current-slide');
+                prevBtn.disabled = this.currentSlide === 0;
+                nextBtn.innerHTML = this.currentSlide === this.totalSlides - 1 ? '<i class="ph ph-arrow-clockwise"></i>' : '<i class="ph ph-caret-right"></i>';
+                currentSlideSpan.textContent = this.currentSlide + 1;
+                App.utils.animate.scale(currentSlideSpan, 1, 1.1, 150);
+                setTimeout(() => App.utils.animate.scale(currentSlideSpan, 1.1, 1, 150), 150);
+            }
+        };
+
+        App.footer = {
+            element: null, state: 'hidden', hideTimeout: null, mouseY: window.innerHeight,
+            init() {
+                this.element = App.utils.$(App.config.SELECTORS.FOOTER);
+                this.bindEvents();
+                setTimeout(() => this.setState('minimal'), 500);
+            },
+            bindEvents() {
+                document.addEventListener('mousemove', (e) => { this.mouseY = e.clientY; this.updateVisibility(); });
+                document.addEventListener('mouseleave', () => { this.mouseY = window.innerHeight; this.updateVisibility(); });
+                this.element.addEventListener('mouseenter', () => clearTimeout(this.hideTimeout));
+                this.element.addEventListener('mouseleave', () => this.scheduleHide());
+            },
+            updateVisibility() {
+                const distanceFromBottom = window.innerHeight - this.mouseY;
+                clearTimeout(this.hideTimeout);
+                if (distanceFromBottom <= App.config.FOOTER.SHOW_THRESHOLD) this.setState('full');
+                else if (distanceFromBottom <= App.config.FOOTER.HIDE_THRESHOLD) this.setState('minimal');
+                else this.scheduleHide();
+            },
+            setState(newState) {
+                if (this.state === newState) return;
+                this.state = newState;
+                this.element.setAttribute('data-state', newState);
+            },
+            scheduleHide(delay = App.config.FOOTER.HIDE_DELAY) {
+                this.hideTimeout = setTimeout(() => this.setState('hidden'), delay);
+            }
+        };
+
+        App.download = {
+            init() {
+                const downloadBtn = App.utils.$(App.config.SELECTORS.DOWNLOAD_BTN);
+                downloadBtn.addEventListener('click', () => {
+                    const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'load-balancing-go-istio.html';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+            }
+        };
+
+        App.scaler = {
+            init() {
+                const wrapper = App.utils.$('#presentation-wrapper');
+                const scale = () => {
+                    const scaleValue = Math.min(window.innerWidth / App.config.PRESENTATION.WIDTH, window.innerHeight / App.config.PRESENTATION.HEIGHT);
+                    wrapper.style.transform = `scale(${scaleValue})`;
+                    wrapper.style.left = `${(window.innerWidth - (App.config.PRESENTATION.WIDTH * scaleValue)) / 2}px`;
+                    wrapper.style.top = `${(window.innerHeight - (App.config.PRESENTATION.HEIGHT * scaleValue)) / 2}px`;
+                    wrapper.style.position = 'absolute';
+                };
+                window.addEventListener('resize', scale);
+                scale();
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            App.navigation.init();
+            App.footer.init();
+            App.download.init();
+            App.scaler.init();
+        });
+    </script>
+</body>
+</html>
