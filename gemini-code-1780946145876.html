@@ -742,21 +742,27 @@
                 <!-- Slide 14: O que é Service Mesh -->
                 <section class="slide text-center">
                     <div class="animated w-full max-w-6xl">
-                        <h2 class="text-5xl font-bold mb-12">Service Mesh (Istio)</h2>
+                        <h2 class="text-5xl font-bold mb-12">Service Mesh</h2>
                         <div class="comparison-grid">
                             <div class="comparison-card text-left">
-                                <h3 class="text-2xl font-bold mb-4 highlight-text">Control Plane (Istiod)</h3>
+                                <div class="flex items-center gap-3 mb-4">
+                                    <img src="https://raw.githubusercontent.com/cncf/artwork/main/projects/istio/icon/color/istio-icon-color.svg" alt="Istio" style="height:36px;width:auto;">
+                                    <h3 class="text-2xl font-bold highlight-text">Control Plane (Istiod)</h3>
+                                </div>
                                 <ul class="list-disc pl-5 space-y-3 text-lg text-secondary">
                                     <li>Interage com a API do Kubernetes</li>
-                                    <li>Injeta o proxy automaticamente</li>
+                                    <li>Injeta o sidecar proxy em cada pod</li>
                                     <li>Distribui as regras de roteamento</li>
                                 </ul>
                             </div>
                             <div class="comparison-card text-left">
-                                <h3 class="text-2xl font-bold mb-4 text-blue-600">Data Plane (Envoy)</h3>
+                                <div class="flex items-center gap-3 mb-4">
+                                    <img src="https://raw.githubusercontent.com/cncf/artwork/main/projects/envoy/icon/color/envoy-icon-color.svg" alt="Envoy" style="height:36px;width:auto;">
+                                    <h3 class="text-2xl font-bold highlight-text">Data Plane (Envoy)</h3>
+                                </div>
                                 <ul class="list-disc pl-5 space-y-3 text-lg text-secondary">
                                     <li>Roda junto com a aplicação no pod</li>
-                                    <li>Intercepta todo o tráfego I/O</li>
+                                    <li>Intercepta todo o tráfego de entrada e saída</li>
                                     <li>Opera em L7 — <strong>enxerga o request</strong></li>
                                 </ul>
                             </div>
