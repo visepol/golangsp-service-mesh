@@ -773,23 +773,69 @@
                 <!-- Slide 15: Arquitetura Sidecar -->
                 <section class="slide text-center">
                     <div class="animated w-full max-w-5xl">
-                        <h2 class="text-4xl font-bold mb-8">Arquitetura de Sidecar (Por dentro do Pod)</h2>
-                        <div class="p-8 bg-white border border-slate-200 rounded-xl shadow-lg inline-block w-full max-w-3xl">
-                            <div class="text-left font-bold text-slate-400 mb-6 uppercase tracking-wider text-sm">Pod K8s Boundary</div>
-                            <div class="flex items-center justify-between gap-4">
-                                <div class="flex-1 p-6 bg-slate-50 border border-slate-200 rounded text-center">
-                                    <i class="ph-bold ph-app-window text-4xl text-slate-700 mb-2"></i>
-                                    <div class="font-bold">Seu App Go</div>
-                                    <div class="text-sm text-slate-500">Zero código alterado</div>
+                        <h2 class="text-4xl font-bold mb-2">Arquitetura de Sidecar</h2>
+                        <p class="text-base mb-6" style="color:var(--text-secondary);">O Envoy intercepta todo o tráfego — transparente para a aplicação</p>
+
+                        <div class="flex items-center gap-3">
+
+                            <!-- Setas de tráfego (fora do pod) -->
+                            <div class="flex flex-col gap-8 items-end" style="min-width:80px;">
+                                <div class="flex flex-col items-end gap-1">
+                                    <span class="font-mono text-xs font-bold" style="color:var(--stone-primary);">request</span>
+                                    <div class="flex items-center">
+                                        <div style="width:40px;height:2px;background:var(--stone-primary);"></div>
+                                        <div style="border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid var(--stone-primary);"></div>
+                                    </div>
                                 </div>
-                                <div class="flex flex-col items-center">
-                                    <span class="text-xs font-bold text-stone-primary mb-1">iptables hijack</span>
-                                    <i class="ph-bold ph-arrows-left-right text-3xl text-stone-primary"></i>
+                                <div class="flex flex-col items-end gap-1">
+                                    <div class="flex items-center">
+                                        <div style="border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:8px solid #94A3B8;"></div>
+                                        <div style="width:40px;height:2px;background:#94A3B8;"></div>
+                                    </div>
+                                    <span class="font-mono text-xs" style="color:#94A3B8;">response</span>
                                 </div>
-                                <div class="flex-1 p-6 bg-green-50 border border-green-200 rounded text-center">
-                                    <i class="ph-bold ph-shield-check text-4xl text-stone-primary mb-2"></i>
-                                    <div class="font-bold text-stone-primary">Envoy Proxy</div>
-                                    <div class="text-sm text-green-700">Intercepta L7</div>
+                            </div>
+
+                            <!-- Pod boundary -->
+                            <div class="flex-1 relative rounded-2xl px-6 py-6" style="border:2px dashed #CBD5E1;background:#FAFAFA;">
+
+                                <!-- Pod label -->
+                                <div class="absolute px-3 py-0.5 rounded text-xs font-bold uppercase tracking-widest bg-white" style="top:-11px;left:20px;color:#94A3B8;border:1px solid #CBD5E1;">Pod</div>
+
+                                <div class="flex items-stretch gap-3">
+
+                                    <!-- Container: Envoy -->
+                                    <div class="flex-1 flex flex-col items-center py-5 px-4 rounded-xl" style="border:2px solid var(--stone-primary);background:rgba(0,172,215,0.05);">
+                                        <div class="text-xs font-bold uppercase tracking-widest mb-3 px-2 py-0.5 rounded" style="color:var(--stone-primary);background:rgba(0,172,215,0.12);">container</div>
+                                        <img src="https://raw.githubusercontent.com/cncf/artwork/main/projects/envoy/icon/color/envoy-icon-color.svg" alt="Envoy" style="height:40px;width:auto;margin-bottom:8px;">
+                                        <div class="font-bold text-lg mb-1" style="color:var(--stone-primary);">Envoy Proxy</div>
+                                        <div class="font-mono text-sm mb-4" style="color:var(--text-secondary);">:15001</div>
+                                        <div class="flex gap-1.5 flex-wrap justify-center">
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-bold" style="background:rgba(0,172,215,0.12);color:var(--stone-primary);">L7</span>
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-bold" style="background:rgba(0,172,215,0.12);color:var(--stone-primary);">mTLS</span>
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-bold" style="background:rgba(0,172,215,0.12);color:var(--stone-primary);">retry</span>
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-bold" style="background:rgba(0,172,215,0.12);color:var(--stone-primary);">metrics</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- iptables hijack connector -->
+                                    <div class="flex flex-col items-center justify-center gap-2 px-1">
+                                        <div style="border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:8px solid #CBD5E1;"></div>
+                                        <div class="py-1.5 px-2 rounded-lg font-mono text-xs font-bold text-center leading-tight" style="background:#0F172A;color:#64748B;white-space:nowrap;">iptables<br>hijack</div>
+                                        <div style="border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #CBD5E1;"></div>
+                                    </div>
+
+                                    <!-- Container: App Go -->
+                                    <div class="flex-1 flex flex-col items-center py-5 px-4 rounded-xl" style="border:2px solid #CBD5E1;background:white;">
+                                        <div class="text-xs font-bold uppercase tracking-widest mb-3 px-2 py-0.5 rounded" style="color:#94A3B8;background:#F1F5F9;">container</div>
+                                        <img src="https://go.dev/images/gophers/pilot-bust.svg" alt="Go" style="height:40px;width:auto;margin-bottom:8px;">
+                                        <div class="font-bold text-lg mb-1" style="color:#334155;">App Go</div>
+                                        <div class="font-mono text-sm mb-4" style="color:var(--text-secondary);">:8080</div>
+                                        <div class="flex gap-1.5 justify-center">
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-bold" style="background:#F1F5F9;color:#64748B;">zero código</span>
+                                        </div>
+                                    </div>
+
                                 </div>
                             </div>
                         </div>
