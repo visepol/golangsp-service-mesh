@@ -97,7 +97,7 @@ Demo ao vivo onde a audiência vê, em tempo real, que sem Istio todos os respon
 
 | # | Título | Posição | Slides | Duração |
 |---|---|---|---|---|
-| 1 | Conexões Persistentes em Go — Controlando o Tráfego com Service Mesh | What Is | 3 | ~4 min |
+| 1 | Conexões Persistentes em Go — Controlando o Tráfego com Service Mesh | What Is | 5 | ~6 min |
 | 2 | Conexões persistentes: a vantagem que vira armadilha | What Is → Complication | 4 | ~6 min |
 | 3 | Por que o proxy não consegue ajudar | Complication (escalada) | 3 | ~5 min |
 | 4 | Demo — vendo carga ir para um único pod em tempo real | STAR | 2 | ~5 min |
@@ -106,7 +106,7 @@ Demo ao vivo onde a audiência vê, em tempo real, que sem Istio todos os respon
 | 7 | Demo — vendo a carga distribuída em tempo real | Answer → New Bliss | 3 | ~6 min |
 | 8 | A infra cuida do que é da infra | New Bliss → Call to Action | 2 | ~4 min |
 
-**Total: 23 slides / ~40 min**
+**Total: 25 slides / ~42 min** *(os 2 slides de fundamentos do Arco 1 somam ~+2 min ao tempo de talk)*
 
 ---
 
@@ -114,9 +114,9 @@ Demo ao vivo onde a audiência vê, em tempo real, que sem Istio todos os respon
 
 ---
 
-### Arco 1 — What Is (~4 min)
+### Arco 1 — What Is (~6 min)
 **`Conexões Persistentes em Go — Controlando o Tráfego com Service Mesh`**
-*Resumo: Go usa HTTP/2 por padrão, trazendo multiplexação sobre uma única conexão TCP — menos overhead, melhor performance. É o stack que a audiência já opera e o ponto de partida da talk.*
+*Resumo: a web nasceu de duas peças simples — HTTP + HTML — e foi essa simplicidade (stateless, texto legível, request/response) que a fez escalar. Mas abrir conexão custa: o handshake. Go usa HTTP/2 por padrão, que reaproveita uma única conexão TCP para evitar esse custo — menos overhead, melhor performance. É o stack que a audiência já opera e o ponto de partida da talk.*
 
 ---
 
@@ -133,7 +133,55 @@ Demo ao vivo onde a audiência vê, em tempo real, que sem Istio todos os respon
 
 ---
 
-#### Slide 1.2 — O stack Go
+#### Slide 1.2 — HTTP + HTML: a web simples
+
+| Campo | Decisão |
+|---|---|
+| Conteúdo | História de HTTP + HTML e por que funcionavam tão bem — a simplicidade que fez a web escalar |
+| Formato visual | Par HTTP + HTML no topo + grade de 4 propriedades |
+| Imagem/ícone | Ícones Phosphor (HTTP, HTML) e por propriedade (stateless, texto, request/response, desacoplado) |
+| Animação | De uma vez — fadeIn |
+| Speaker note | A web nasceu de duas peças de texto; stateless/legível/request-response foi o que permitiu escalar. Fixar "stateless": cada request é independente |
+| Transição | Virada — "mas abrir uma conexão tem um custo, e esse custo tem nome: handshake" |
+
+**Estrutura:**
+```
+HTTP — como pedir e transportar   +   HTML — o que é transportado
+
+Stateless · Texto legível · Request/Response · Desacoplado
+```
+
+---
+
+#### Slide 1.3 — Toda conexão nasce e morre
+
+| Campo | Decisão |
+|---|---|
+| Conteúdo | Ciclo de vida de uma conexão — handshake (SYN → SYN-ACK → ACK) abre, conteúdo passa (GET → 200), e a conexão morre (FIN). O ponto: recebeu o conteúdo, a conexão acaba |
+| Formato visual | Colunas Cliente / Servidor + 6 setas direcionais (3 handshake com badge, divisor "conexão aberta", entrega, FIN em vermelho) + punchline "a conexão morre" |
+| Imagem/ícone | Ícones Cliente (desktop) e Servidor; setas desenhadas em CSS; FIN destacado em vermelho |
+| Animação | Build beat a beat — cada passo revelado em sequência até a morte da conexão; reinicia a cada navegação (`.slide--active`) |
+| Speaker note | Handshake abre, conteúdo passa, FIN encerra. Recebeu o conteúdo → a conexão morre → o próximo request começa tudo de novo. Esse custo repetido é a dor que a evolução resolve |
+| Transição | Antecipação — "pagar o handshake a cada request é caro. Foi isso que a evolução veio resolver" |
+
+**Estrutura:**
+```
+Cliente                    Servidor
+   ── SYN ───────────────────▶     (1) "abrir conexão"
+   ◀─────────────── SYN-ACK ──     (2) "conexão aberta"
+   ── ACK ───────────────────▶     (3) "confirmado"
+   ───────── conexão aberta ─────────
+   ── GET / ──────────────────▶     "manda o conteúdo"
+   ◀──────────── 200 + dados ──     "aqui está"
+   ── FIN ───────────────────▶     ✕ conexão encerrada
+
+   Recebeu o conteúdo? A conexão morre.
+   Próximo request: tudo de novo.
+```
+
+---
+
+#### Slide 1.4 — O stack Go
 
 | Campo | Decisão |
 |---|---|
@@ -146,7 +194,7 @@ Demo ao vivo onde a audiência vê, em tempo real, que sem Istio todos os respon
 
 ---
 
-#### Slide 1.3 — Go em produção
+#### Slide 1.5 — Go em produção
 
 | Campo | Decisão |
 |---|---|

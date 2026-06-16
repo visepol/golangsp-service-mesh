@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Load Balancing com Service Mesh em Go - Vinicius Lopes</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        /* ===== DESIGN TOKENS ===== */
+        :root {
+            --stone-primary: #00ACD7;
+            --stone-primary-rgb: 0, 172, 215;
+            --stone-primary-light: #B3ECF7;
+            --stone-primary-dark: #005F78;
+            
+            --status-warning: #FFBF00;
+            --status-error: #D92D20;
+            --status-info: #3B82F6;
+            
+            --surface-body: #F8FAFC;
+            --surface-main: #FFFFFF;
+            --surface-glass: rgba(255, 255, 255, 0.8);
+            --surface-glass-hover: rgba(255, 255, 255, 0.95);
+            
+            --text-primary: #1F2937;
+            --text-secondary: rgba(31, 41, 55, 0.7);
+            --text-muted: rgba(31, 41, 55, 0.5);
+            
+            --space-xs: 0.25rem;
+            --space-sm: 0.5rem;
+            --space-md: 0.75rem;
+            --space-lg: 1rem;
+            --space-xl: 1.5rem;
+            --space-2xl: 2rem;
+            --space-3xl: 3rem;
+            
+            --duration-fast: 150ms;
+            --duration-normal: 300ms;
+            --duration-slow: 600ms;
+            --easing-default: cubic-bezier(0.4, 0, 0.2, 1);
+            
+            --presentation-width: 1280px;
+            --presentation-height: 720px;
+        }
+
+        /* ===== BASE ===== */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--surface-body);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .presentation {
+            width: var(--presentation-width);
+            height: var(--presentation-height);
+            transform-origin: top left;
+            transition: transform var(--duration-normal) var(--easing-default);
+        }
+
+        .presentation__container {
+            width: 100%;
+            height: 100%;
+            background: var(--surface-main);
+            border-radius: var(--space-lg);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
+        }
+
+        .presentation__header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: var(--space-xl);
+            z-index: 20;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .presentation__main {
+            flex: 1;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            inset: 0;
+            padding: var(--space-3xl) var(--space-2xl) var(--space-2xl);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity var(--duration-slow) var(--easing-default);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .slide--active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* ===== COMPONENTS ===== */
+        .highlight-text { color: var(--stone-primary); }
+        .keyword-highlight {
+            background-color: var(--stone-primary-dark);
+            color: var(--surface-main);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: 700;
+        }
+
+        .glass {
+            background: var(--surface-glass);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: var(--space-lg);
+        }
+
+        .btn {
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; border: 1px solid;
+            transition: all var(--duration-normal) var(--easing-default);
+            cursor: pointer; font-size: 0.875rem;
+        }
+        .btn--sm { width: var(--space-2xl); height: var(--space-2xl); }
+        .btn--primary {
+            background: rgba(var(--stone-primary-rgb), 0.1);
+            border-color: rgba(var(--stone-primary-rgb), 0.2);
+            color: var(--stone-primary);
+        }
+        .btn--primary:hover {
+            background: rgba(var(--stone-primary-rgb), 0.2);
+            transform: scale(1.05);
+        }
+        .btn--ghost {
+            background: var(--surface-glass);
+            border-color: rgba(0, 0, 0, 0.1);
+            color: var(--text-muted);
+        }
+
+        /* ===== LAYOUTS AVANÇADOS ===== */
+        .comparison-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2xl); width: 100%;
+        }
+        .comparison-card {
+            padding: var(--space-xl); border-radius: var(--space-lg);
+            background: var(--surface-body); border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .pillars-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-xl); margin-top: var(--space-xl);
+        }
+        .pillar-card {
+            padding: var(--space-xl); border-radius: var(--space-lg);
+            background: var(--surface-body); border: 1px solid rgba(0,0,0,0.05);
+            text-align: left;
+        }
+        .pillar-card.active { border-top: 4px solid var(--stone-primary); }
+
+        .terminal-window {
+            background: #0f172a;
+            border-radius: 12px;
+            border: 1px solid #1e293b;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: left;
+            font-family: 'JetBrains Mono', monospace;
+            color: #e2e8f0;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+        .terminal-header {
+            background: #1e293b;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot-red { background: #ef4444; }
+        .dot-yellow { background: #f59e0b; }
+        .dot-green { background: #22c55e; }
+        .terminal-body { padding: 24px; font-size: 1.1rem; line-height: 1.6; }
+
+        .code-block {
+            font-family: 'JetBrains Mono', monospace;
+            background: #f1f5f9;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            text-align: left;
+            font-size: 1rem;
+            color: #334155;
+            white-space: pre-wrap;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            z-index: 1000; transition: all 0.4s ease; padding-bottom: var(--space-2xl);
+        }
+        .footer[data-state="hidden"] { opacity: 0; transform: translateX(-50%) translateY(100%); pointer-events: none; }
+        .footer[data-state="full"] { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .footer__container {
+            padding: var(--space-sm) var(--space-3xl); display: flex; align-items: center;
+            gap: var(--space-md); position: relative; transition: all 0.4s ease; min-width: 260px;
+        }
+        .slide-info {
+            font-size: 0.75rem; color: var(--text-muted); font-weight: 500;
+            padding: 0 var(--space-md); text-align: center; background: rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 0, 0, 0.05); border-radius: var(--space-sm); min-width: 3rem;
+        }
+        .current-slide { color: var(--stone-primary); font-weight: 600; }
+
+        /* Animation */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .slide--active .animated { animation: fadeIn 0.8s ease-out forwards; }
+
+        /* ===== NOTES PANEL (practice mode) ===== */
+        .notes-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            height: 100vh;
+            width: 360px;
+            padding: var(--space-2xl) var(--space-xl);
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-xl);
+            overflow-y: auto;
+            z-index: 2000;
+            color: var(--text-primary);
+            transition: transform var(--duration-normal) var(--easing-default);
+        }
+        .notes-panel[data-hidden="true"] { transform: translateX(100%); }
+
+        .notes-panel__arc {
+            display: inline-flex;
+            align-self: flex-start;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: rgba(var(--stone-primary-rgb), 0.12);
+            color: var(--stone-primary-dark);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .notes-panel__slide-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            line-height: 1.3;
+            color: var(--text-primary);
+        }
+        .notes-panel__section {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+        }
+        .notes-panel__label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .notes-panel__note {
+            font-size: 1rem;
+            line-height: 1.55;
+            color: var(--text-primary);
+        }
+        .notes-panel__transition {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            padding-left: var(--space-md);
+            border-left: 3px solid var(--stone-primary);
+        }
+        .notes-panel__hint {
+            margin-top: auto;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+            padding-top: var(--space-lg);
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        .notes-panel__hint kbd {
+            display: inline-block;
+            padding: 2px 6px;
+            background: rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .notes-panel__toggle {
+            position: fixed;
+            top: var(--space-lg);
+            right: var(--space-lg);
+            z-index: 2100;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            color: var(--stone-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: all var(--duration-normal) var(--easing-default);
+        }
+        .notes-panel__toggle:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="presentation" id="presentation-wrapper">
+        <div class="presentation__container">
+            
+            <header class="presentation__header">
+                <div class="flex items-center gap-2">
+                    <img src="https://go.dev/images/gophers/pilot-bust.svg" alt="Go Gopher" style="height:36px;width:auto;">
+                    <span class="font-bold text-secondary tracking-widest uppercase" style="font-size:18px;">GolangSP</span>
+                </div>
+            </header>
+
+            <main class="presentation__main">
+                
+                <!-- ARCO 1: What Is -->
+                
+                <!-- Slide 1: Abertura -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <i class="ph-fill ph-plugs text-7xl mb-6" style="color: var(--stone-primary);"></i>
+                        <h1 class="text-6xl font-black tracking-tight mb-6">Conexões Persistentes em Go</h1>
+                        <h2 class="text-3xl text-secondary font-medium mb-12">Controlando o Tráfego com <span class="highlight-text font-bold">Service Mesh</span></h2>
+                        <div class="mt-8 text-lg font-bold">Vinicius Lopes</div>
+                        <div class="text-sm mt-1" style="color:var(--text-secondary);">Software Engineer, Stone Co.</div>
+                    </div>
+                </section>
+
+                <!-- Slide 2: HTTP + HTML — a simplicidade que escalou -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-5xl font-bold mb-3">A web nasceu simples</h2>
+                        <p class="text-xl text-secondary mb-10">Duas peças de texto puro — e foi a simplicidade que a fez escalar.</p>
+
+                        <!-- Par HTTP + HTML -->
+                        <div class="flex items-center justify-center gap-6 mb-10">
+                            <div class="comparison-card flex items-center gap-3" style="padding:var(--space-lg) var(--space-xl);">
+                                <i class="ph-fill ph-arrows-down-up text-3xl highlight-text"></i>
+                                <div class="text-left">
+                                    <div class="font-bold text-lg">HTTP</div>
+                                    <div class="text-sm text-secondary">como pedir e transportar</div>
+                                </div>
+                            </div>
+                            <i class="ph-bold ph-plus text-2xl text-muted"></i>
+                            <div class="comparison-card flex items-center gap-3" style="padding:var(--space-lg) var(--space-xl);">
+                                <i class="ph-fill ph-file-html text-3xl highlight-text"></i>
+                                <div class="text-left">
+                                    <div class="font-bold text-lg">HTML</div>
+                                    <div class="text-sm text-secondary">o que é transportado</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Por que funcionou tão bem -->
+                        <div class="grid grid-cols-4 gap-4">
+                            <div class="comparison-card">
+                                <i class="ph-bold ph-stack-simple text-3xl highlight-text mb-2"></i>
+                                <div class="font-bold">Stateless</div>
+                                <div class="text-sm text-secondary">cada request é independente</div>
+                            </div>
+                            <div class="comparison-card">
+                                <i class="ph-bold ph-text-aa text-3xl highlight-text mb-2"></i>
+                                <div class="font-bold">Texto legível</div>
+                                <div class="text-sm text-secondary">humano lê e depura</div>
+                            </div>
+                            <div class="comparison-card">
+                                <i class="ph-bold ph-arrows-left-right text-3xl highlight-text mb-2"></i>
+                                <div class="font-bold">Request/Response</div>
+                                <div class="text-sm text-secondary">modelo previsível</div>
+                            </div>
+                            <div class="comparison-card">
+                                <i class="ph-bold ph-plugs-connected text-3xl highlight-text mb-2"></i>
+                                <div class="font-bold">Desacoplado</div>
+                                <div class="text-sm text-secondary">qualquer cliente, qualquer servidor</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 3: Toda conexão nasce e morre (handshake → entrega → FIN) -->
+                <section class="slide text-center">
+                    <div class="w-full max-w-3xl">
+                        <h2 class="text-4xl font-bold mb-2">Toda conexão nasce e morre</h2>
+                        <p class="text-lg text-secondary mb-5">O handshake abre a conexão, o conteúdo passa — e ela se encerra logo em seguida.</p>
+
+                        <!-- Endpoints -->
+                        <div class="flex justify-between items-end mb-3 px-2">
+                            <div class="flex flex-col items-center gap-1" style="width:120px;">
+                                <i class="ph-fill ph-desktop text-3xl highlight-text"></i>
+                                <span class="font-bold text-sm">Cliente</span>
+                            </div>
+                            <div class="flex flex-col items-center gap-1" style="width:120px;">
+                                <i class="ph-fill ph-hard-drives text-3xl highlight-text"></i>
+                                <span class="font-bold text-sm">Servidor</span>
+                            </div>
+                        </div>
+
+                        <!-- Beats -->
+                        <div class="flex flex-col gap-2.5">
+
+                            <!-- 1 — SYN → -->
+                            <div class="hs-row hs-1 flex items-center gap-4">
+                                <div class="hs-badge">1</div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-mono font-bold text-sm" style="color:var(--stone-primary);">SYN</span>
+                                        <div class="flex items-center flex-1">
+                                            <div style="flex:1;height:2px;background:var(--stone-primary);"></div>
+                                            <div style="border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:10px solid var(--stone-primary);"></div>
+                                        </div>
+                                        <span class="text-xs text-muted">“abrir conexão”</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2 — SYN-ACK ← -->
+                            <div class="hs-row hs-2 flex items-center gap-4">
+                                <div class="hs-badge">2</div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xs text-muted">“conexão aberta”</span>
+                                        <div class="flex items-center flex-1">
+                                            <div style="border-top:6px solid transparent;border-bottom:6px solid transparent;border-right:10px solid #94A3B8;"></div>
+                                            <div style="flex:1;height:2px;background:#94A3B8;"></div>
+                                        </div>
+                                        <span class="font-mono font-bold text-sm" style="color:#64748B;">SYN-ACK</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3 — ACK → -->
+                            <div class="hs-row hs-3 flex items-center gap-4">
+                                <div class="hs-badge">3</div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-mono font-bold text-sm" style="color:var(--stone-primary);">ACK</span>
+                                        <div class="flex items-center flex-1">
+                                            <div style="flex:1;height:2px;background:var(--stone-primary);"></div>
+                                            <div style="border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:10px solid var(--stone-primary);"></div>
+                                        </div>
+                                        <span class="text-xs text-muted">“confirmado”</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- divisor: conexão aberta -->
+                            <div class="hs-open flex items-center justify-center my-1">
+                                <span class="font-mono text-xs px-3 py-1 rounded-full" style="background:rgba(0,172,215,0.1);color:var(--stone-primary-dark);">conexão aberta</span>
+                            </div>
+
+                            <!-- 4 — GET / → -->
+                            <div class="hs-row hs-4 flex items-center gap-4">
+                                <div style="width:32px;flex-shrink:0;"></div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-mono font-bold text-sm" style="color:var(--stone-primary);">GET /</span>
+                                        <div class="flex items-center flex-1">
+                                            <div style="flex:1;height:2px;background:var(--stone-primary);"></div>
+                                            <div style="border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:10px solid var(--stone-primary);"></div>
+                                        </div>
+                                        <span class="text-xs text-muted">“manda o conteúdo”</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 5 — 200 + dados ← -->
+                            <div class="hs-row hs-5 flex items-center gap-4">
+                                <div style="width:32px;flex-shrink:0;"></div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xs text-muted">“aqui está”</span>
+                                        <div class="flex items-center flex-1">
+                                            <div style="border-top:6px solid transparent;border-bottom:6px solid transparent;border-right:10px solid #94A3B8;"></div>
+                                            <div style="flex:1;height:2px;background:#94A3B8;"></div>
+                                        </div>
+                                        <span class="font-mono font-bold text-sm" style="color:#64748B;">200 + dados</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 6 — FIN → (morte) -->
+                            <div class="hs-row hs-6 flex items-center gap-4">
+                                <div style="width:32px;flex-shrink:0;"></div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-mono font-bold text-sm" style="color:#EF4444;">FIN</span>
+                                        <div class="flex items-center flex-1">
+                                            <div style="flex:1;height:2px;background:#EF4444;"></div>
+                                            <div style="border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:10px solid #EF4444;"></div>
+                                        </div>
+                                        <span class="text-xs font-bold" style="color:#EF4444;">✕ conexão encerrada</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Punchline: a conexão morre -->
+                        <div class="hs-done mt-5">
+                            <p class="text-xl font-bold">Recebeu o conteúdo? A conexão <span style="color:#EF4444;">morre</span>.</p>
+                            <p class="text-sm text-secondary mt-1">Próximo request: tudo de novo — outro handshake.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <style>
+                    /* Slide 3 — ciclo de vida da conexão: build beat a beat, reinicia a cada navegação */
+                    .hs-row, .hs-open, .hs-done { opacity: 0; }
+                    .hs-badge {
+                        width: 32px; height: 32px; border-radius: 50%;
+                        background: var(--stone-primary); color: #fff;
+                        display: flex; align-items: center; justify-content: center;
+                        font-weight: 700; font-size: 14px; flex-shrink: 0;
+                    }
+                    .slide--active .hs-1   { animation: hsfade 0.5s ease 0.3s both; }
+                    .slide--active .hs-2   { animation: hsfade 0.5s ease 0.7s both; }
+                    .slide--active .hs-3   { animation: hsfade 0.5s ease 1.1s both; }
+                    .slide--active .hs-open{ animation: hsfade 0.5s ease 1.4s both; }
+                    .slide--active .hs-4   { animation: hsfade 0.5s ease 1.8s both; }
+                    .slide--active .hs-5   { animation: hsfade 0.5s ease 2.2s both; }
+                    .slide--active .hs-6   { animation: hsfade 0.5s ease 2.7s both; }
+                    .slide--active .hs-done{ animation: hsfade 0.5s ease 3.2s both; }
+                    @keyframes hsfade {
+                        from { opacity: 0; transform: translateY(8px); }
+                        to   { opacity: 1; transform: translateY(0); }
+                    }
+                </style>
+
+                <!-- Slide 4: O stack Go (HTTP/1.1 vs HTTP/2) -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-5xl font-bold mb-12">A evolução necessária</h2>
+                        <div class="comparison-grid">
+                            <div class="comparison-card">
+                                <h3 class="text-2xl font-bold mb-4">HTTP/1.1</h3>
+                                <i class="ph ph-arrows-left-right text-5xl text-muted mb-4"></i>
+                                <p class="text-secondary text-lg">Um request por conexão.<br>Overhead alto de handshakes TCP/TLS para cada chamada.</p>
+                            </div>
+                            <div class="comparison-card" style="border-top: 4px solid var(--stone-primary);">
+                                <h3 class="text-2xl font-bold mb-4 highlight-text">HTTP/2</h3>
+                                <i class="ph ph-stack text-5xl mb-4 highlight-text"></i>
+                                <p class="text-secondary text-lg">Multiplexação. Vários requests fluindo paralelamente sobre uma <span class="font-bold">única conexão TCP</span>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 5: Arquitetura em Produção -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-5xl font-bold mb-4">Go em Produção</h2>
+                        <p class="text-xl text-secondary mb-12">O diagrama parece saudável e escalável horizontalmente.</p>
+
+                        <div class="flex items-center justify-center gap-6">
+
+                            <!-- Serviço A -->
+                            <div class="p-5 bg-white border-2 border-slate-200 rounded-xl shadow-sm flex flex-col items-center gap-2" style="min-width:120px;">
+                                <i class="ph-fill ph-cube text-4xl text-secondary"></i>
+                                <div class="font-bold text-sm">Serviço A</div>
+                            </div>
+
+                            <div class="flex flex-col items-center gap-1">
+                                <span class="font-mono text-xs text-muted">HTTP/2</span>
+                                <i class="ph-bold ph-arrow-right text-2xl text-muted"></i>
+                            </div>
+
+                            <!-- Ingress Nginx -->
+                            <div class="p-5 bg-slate-100 border border-slate-200 rounded-xl flex flex-col items-center gap-2" style="min-width:130px;">
+                                <i class="ph-fill ph-hard-drives text-4xl highlight-text"></i>
+                                <div class="font-bold text-sm">Ingress Nginx</div>
+                            </div>
+
+                            <div class="flex flex-col items-center gap-1">
+                                <span class="font-mono text-xs text-muted" style="visibility:hidden;">HTTP/2</span>
+                                <i class="ph-bold ph-arrow-right text-2xl text-muted"></i>
+                            </div>
+
+                            <!-- Pods Serviço B -->
+                            <div class="border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col gap-3">
+                                <div class="text-xs font-bold text-muted uppercase tracking-widest text-center mb-1">Serviço B</div>
+                                <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-sm flex items-center gap-3" style="min-width:130px;">
+                                    <i class="ph-fill ph-cube text-xl highlight-text"></i>
+                                    <div class="font-bold text-sm">Pod 1</div>
+                                </div>
+                                <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-sm flex items-center gap-3" style="min-width:130px;">
+                                    <i class="ph-fill ph-cube text-xl highlight-text"></i>
+                                    <div class="font-bold text-sm">Pod 2</div>
+                                </div>
+                                <div class="p-3 bg-white border border-slate-200 rounded-lg shadow-sm flex items-center gap-3" style="min-width:130px;">
+                                    <i class="ph-fill ph-cube text-xl highlight-text"></i>
+                                    <div class="font-bold text-sm">Pod 3</div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ARCO 2: Complication -->
+
+                <!-- Slide 4: Multiplexação revisitada -->
+                <section class="slide text-center">
+                    <div class="w-full max-w-5xl">
+
+                        <!-- Título original -->
+                        <h2 class="text-4xl font-bold mb-3" style="opacity:0; animation: s4fade 0.4s ease forwards; animation-delay:0.05s;">A vantagem que vira armadilha</h2>
+
+                        <!-- Texto original compactado -->
+                        <p class="text-lg text-secondary mb-10" style="opacity:0; animation: s4fade 0.4s ease forwards; animation-delay:0.15s;">
+                            Com HTTP/2, o handshake acontece <span class="keyword-highlight" style="padding:2px 8px;">apenas uma vez</span> —
+                            requests subsequentes usam a mesma conexão já estabelecida.
+                        </p>
+
+                        <!-- Timeline -->
+                        <div class="relative px-8" style="padding-bottom: 52px;">
+
+                            <!-- Horizontal line -->
+                            <div class="absolute left-8 right-8" style="top:16px; height:2px; background: rgba(0,0,0,0.1);"></div>
+
+                            <!-- Markers row -->
+                            <div class="flex items-start justify-between relative">
+
+                                <!-- Handshake marker -->
+                                <div style="opacity:0; animation: s4fade 0.5s ease forwards; animation-delay:0.3s;">
+                                    <div class="flex flex-col items-center">
+                                        <div style="width:32px;height:32px;border-radius:50%;background:var(--stone-primary);display:flex;align-items:center;justify-content:center;z-index:10;position:relative;">
+                                            <i class="ph-fill ph-lock-key text-white" style="font-size:14px;"></i>
+                                        </div>
+                                        <div style="margin-top:12px;">
+                                            <div class="font-bold text-sm" style="color:var(--stone-primary);">TLS Handshake</div>
+                                            <div class="font-mono text-xs text-muted mt-1">custo único</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Request 1 -->
+                                <div style="opacity:0; animation: s4fade 0.4s ease forwards; animation-delay:0.55s;">
+                                    <div class="flex flex-col items-center">
+                                        <div style="width:16px;height:16px;border-radius:50%;background:#E2E8F0;border:2px solid #94A3B8;margin-top:8px;position:relative;z-index:10;"></div>
+                                        <div class="font-mono text-xs text-secondary mt-3">Request 1</div>
+                                    </div>
+                                </div>
+
+                                <!-- Request 2 -->
+                                <div style="opacity:0; animation: s4fade 0.4s ease forwards; animation-delay:0.75s;">
+                                    <div class="flex flex-col items-center">
+                                        <div style="width:16px;height:16px;border-radius:50%;background:#E2E8F0;border:2px solid #94A3B8;margin-top:8px;position:relative;z-index:10;"></div>
+                                        <div class="font-mono text-xs text-secondary mt-3">Request 2</div>
+                                    </div>
+                                </div>
+
+                                <!-- Request 3 -->
+                                <div style="opacity:0; animation: s4fade 0.4s ease forwards; animation-delay:0.95s;">
+                                    <div class="flex flex-col items-center">
+                                        <div style="width:16px;height:16px;border-radius:50%;background:#E2E8F0;border:2px solid #94A3B8;margin-top:8px;position:relative;z-index:10;"></div>
+                                        <div class="font-mono text-xs text-secondary mt-3">Request 3</div>
+                                    </div>
+                                </div>
+
+                                <!-- Request 4 -->
+                                <div style="opacity:0; animation: s4fade 0.4s ease forwards; animation-delay:1.15s;">
+                                    <div class="flex flex-col items-center">
+                                        <div style="width:16px;height:16px;border-radius:50%;background:#E2E8F0;border:2px solid #94A3B8;margin-top:8px;position:relative;z-index:10;"></div>
+                                        <div class="font-mono text-xs text-secondary mt-3">Request 4</div>
+                                    </div>
+                                </div>
+
+                                <!-- N... -->
+                                <div style="opacity:0; animation: s4fade 0.4s ease forwards; animation-delay:1.35s;">
+                                    <div class="flex flex-col items-center">
+                                        <div class="font-mono font-bold text-muted" style="font-size:20px; letter-spacing:0.1em; margin-top:2px;">···</div>
+                                        <div class="font-mono text-xs text-muted mt-3">Request N</div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <style>
+                    @keyframes s4fade {
+                        from { opacity: 0; transform: translateY(8px); }
+                        to   { opacity: 1; transform: translateY(0); }
+                    }
+                </style>
+
+                <!-- Slide 5: O que o ingress enxerga -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-5xl font-bold mb-8">O que o ingress enxerga</h2>
+
+                        <div class="comparison-grid items-stretch">
+
+                            <!-- Panel esquerdo: perspectiva do ingress -->
+                            <div class="flex flex-col items-center">
+                                <p class="text-xs font-bold uppercase tracking-widest mb-4" style="color:var(--text-secondary);">O ingress vê</p>
+
+                                <div class="w-full flex flex-col items-center rounded-2xl py-6 px-6" style="background:#F8FAFC; border:1px solid #E2E8F0; flex:1;">
+
+                                    <!-- Caixa superior: conexão opaca -->
+                                    <div class="flex items-center justify-center rounded-lg font-mono text-xs tracking-wider" style="background:#1E293B; color:#94A3B8; padding:10px 20px; min-width:180px;">
+                                        ━━ conexão TCP ━━
+                                    </div>
+
+                                    <div style="width:2px;height:16px;background:#CBD5E1;"></div>
+
+                                    <!-- Ingress -->
+                                    <div class="flex items-center justify-center bg-white rounded-lg font-mono text-sm shadow-sm border-2" style="border-color:var(--stone-primary); padding:10px 20px; min-width:180px;">ingress nginx</div>
+
+                                    <!-- Pods -->
+                                    <div class="flex items-start justify-center gap-6 w-full mt-4">
+                                        <div class="flex flex-col items-center gap-1">
+                                            <div style="font-size:18px;line-height:1;font-weight:700;color:var(--stone-primary);">↓</div>
+                                            <div class="flex items-center justify-center font-mono text-sm font-bold text-white rounded-lg" style="background:var(--stone-primary); width:72px; padding:10px 0;">Pod 1</div>
+                                            <div class="font-mono text-xs font-bold" style="color:var(--stone-primary);">ativo</div>
+                                        </div>
+                                        <div class="flex flex-col items-center gap-1" style="opacity:0.3;">
+                                            <div style="height:18px;"></div>
+                                            <div class="flex items-center justify-center font-mono text-sm rounded-lg" style="background:#E2E8F0; color:#94A3B8; width:72px; padding:10px 0;">Pod 2</div>
+                                            <div class="font-mono text-xs" style="color:#94A3B8;">—</div>
+                                        </div>
+                                        <div class="flex flex-col items-center gap-1" style="opacity:0.3;">
+                                            <div style="height:18px;"></div>
+                                            <div class="flex items-center justify-center font-mono text-sm rounded-lg" style="background:#E2E8F0; color:#94A3B8; width:72px; padding:10px 0;">Pod 3</div>
+                                            <div class="font-mono text-xs" style="color:#94A3B8;">—</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="font-mono text-sm mt-3" style="color:var(--text-secondary);">1 conexão → 1 pod</p>
+                            </div>
+
+                            <!-- Panel direito: dentro da conexão -->
+                            <div class="flex flex-col items-center">
+                                <p class="text-xs font-bold uppercase tracking-widest mb-4" style="color:var(--text-secondary);">Dentro da conexão</p>
+
+                                <div class="w-full flex flex-col items-center rounded-2xl py-6 px-6" style="background:#F8FAFC; border:1px solid #E2E8F0; flex:1;">
+
+                                    <!-- Caixa superior: requests visíveis -->
+                                    <div class="flex items-center justify-center gap-2 flex-wrap rounded-lg" style="border:1px dashed #93C5FD; background:#EFF6FF; padding:10px 16px; min-width:180px;">
+                                        <span class="font-mono text-xs" style="color:#3B82F6;">req 1</span>
+                                        <span class="font-mono text-xs" style="color:#3B82F6;">req 2</span>
+                                        <span class="font-mono text-xs" style="color:#3B82F6;">req 3</span>
+                                        <span class="font-mono text-xs" style="color:#3B82F6;">req 4</span>
+                                        <span class="font-mono text-xs" style="color:var(--text-muted);">···</span>
+                                    </div>
+
+                                    <div style="width:2px;height:16px;background:#CBD5E1;"></div>
+
+                                    <!-- Ingress (mesmo tamanho, mesmo estilo) -->
+                                    <div class="flex items-center justify-center bg-white rounded-lg font-mono text-sm shadow-sm border-2" style="border-color:var(--stone-primary); padding:10px 20px; min-width:180px;">ingress nginx</div>
+
+                                    <!-- Pods -->
+                                    <div class="flex items-start justify-center gap-6 w-full mt-4">
+                                        <div class="flex flex-col items-center gap-1">
+                                            <div style="font-size:18px;line-height:1;font-weight:700;color:var(--stone-primary);">↓</div>
+                                            <div class="relative">
+                                                <div class="flex items-center justify-center font-mono text-sm font-bold text-white rounded-lg" style="background:var(--stone-primary); width:72px; padding:10px 0;">Pod 1</div>
+                                                <div class="absolute flex items-center justify-center text-white text-xs font-bold rounded-full" style="width:18px;height:18px;background:#EF4444;top:-7px;right:-7px;">!</div>
+                                            </div>
+                                            <div class="font-mono text-xs font-bold" style="color:#EF4444;">100%</div>
+                                        </div>
+                                        <div class="flex flex-col items-center gap-1" style="opacity:0.3;">
+                                            <div style="height:18px;"></div>
+                                            <div class="flex items-center justify-center font-mono text-sm rounded-lg" style="background:#E2E8F0; color:#94A3B8; width:72px; padding:10px 0;">Pod 2</div>
+                                            <div class="font-mono text-xs" style="color:#94A3B8;">ocioso</div>
+                                        </div>
+                                        <div class="flex flex-col items-center gap-1" style="opacity:0.3;">
+                                            <div style="height:18px;"></div>
+                                            <div class="flex items-center justify-center font-mono text-sm rounded-lg" style="background:#E2E8F0; color:#94A3B8; width:72px; padding:10px 0;">Pod 3</div>
+                                            <div class="font-mono text-xs" style="color:#94A3B8;">ocioso</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="font-mono text-sm mt-3" style="color:var(--text-secondary);">N requests → mesmo pod</p>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 6: Um pod absorve tudo -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <h2 class="text-5xl font-bold mb-4">Um pod absorve tudo</h2>
+                        <p class="text-xl mb-10" style="color:var(--text-secondary);">A média de CPU de 33% esconde um problema crítico.</p>
+
+                        <!-- Gráfico de barras -->
+                        <div class="relative flex items-end justify-center gap-16" style="height:220px; border-bottom:2px solid #E2E8F0;">
+
+                            <!-- Linha de média tracejada -->
+                            <div class="s6-line">
+                                <div style="border-top:2px dashed #F59E0B;position:relative;">
+                                    <span style="position:absolute;right:0;top:-24px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#F59E0B;background:white;padding:2px 8px;white-space:nowrap;">Média: 33%</span>
+                                </div>
+                            </div>
+
+                            <!-- Bar Pod 1 -->
+                            <div class="s6-pod1">100%</div>
+
+                            <!-- Bar Pod 2 -->
+                            <div class="s6-pod23"></div>
+
+                            <!-- Bar Pod 3 -->
+                            <div class="s6-pod23"></div>
+                        </div>
+
+                        <!-- Labels dos pods -->
+                        <div class="flex justify-center gap-16 mt-4">
+                            <div class="font-bold" style="width:140px;">Pod 1</div>
+                            <div class="font-bold" style="width:140px;">Pod 2</div>
+                            <div class="font-bold" style="width:140px;">Pod 3</div>
+                        </div>
+                    </div>
+                </section>
+
+                <style>
+                    /* Slide 6 — estado base (sem animação) */
+                    .s6-pod1  { width:140px; height:73px; background:#94A3B8; border-radius:8px 8px 0 0; display:flex; align-items:flex-start; justify-content:center; padding-top:10px; font-weight:700; color:white; font-size:15px; }
+                    .s6-pod23 { width:140px; height:73px; background:#94A3B8; border-radius:8px 8px 0 0; }
+                    .s6-line  { position:absolute; bottom:73px; left:0; right:0; opacity:0; pointer-events:none; z-index:10; }
+
+                    /* Animações ativadas apenas quando o slide está ativo — reiniciam a cada navegação */
+                    .slide--active .s6-pod1  { animation: s6pod1  3s cubic-bezier(0.4,0,0.2,1) 0.3s both; }
+                    .slide--active .s6-pod23 { animation: s6pod23 3s cubic-bezier(0.4,0,0.2,1) 0.3s both; }
+                    .slide--active .s6-line  { animation: s6line  0.5s ease 3.5s forwards; }
+
+                    @keyframes s6pod1 {
+                        0%   { height: 73px;  background: #94A3B8; }
+                        12%  { height: 73px;  background: #94A3B8; }
+                        100% { height: 220px; background: #EF4444; }
+                    }
+                    @keyframes s6pod23 {
+                        0%   { height: 73px; background: #94A3B8; }
+                        12%  { height: 73px; background: #94A3B8; }
+                        100% { height: 3px;  background: #E2E8F0; }
+                    }
+                    @keyframes s6line {
+                        from { opacity: 0; }
+                        to   { opacity: 1; }
+                    }
+                </style>
+
+                <!-- Slide 7: Perguntas sem resposta -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <h2 class="text-5xl font-bold leading-tight mb-12">Escalar horizontalmente não resolve.<br>A conexão <span class="highlight-text">já está estabelecida</span>.</h2>
+                        <ul class="space-y-8 text-left max-w-3xl mx-auto list-disc list-inside">
+                            <li class="text-3xl font-medium" style="color:var(--text-secondary);">Como distribuir os requests?</li>
+                            <li class="text-3xl font-medium" style="color:var(--text-secondary);">Como aplicar retries de forma inteligente?</li>
+                            <li class="text-3xl font-medium" style="color:var(--text-secondary);">Como ter métricas do que ocorre dentro da conexão?</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- ARCO 3: Complication (Escalada) -->
+
+                <!-- Slide 8: Pilha OSI -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-6xl">
+                        <h2 class="text-4xl font-bold mb-2">Não é o proxy, é a camada.</h2>
+                        <p class="text-xl mb-6" style="color:var(--text-secondary);">A pilha OSI define os limites do que a infraestrutura consegue ver.</p>
+
+                        <div class="flex flex-col gap-2 max-w-2xl mx-auto">
+
+                            <!-- L1 — dimmed -->
+                            <div class="flex items-center px-6 py-2 rounded-lg text-left" style="opacity:0.3;background:#F1F5F9;">
+                                <div class="text-sm font-medium">L1 — Física</div>
+                            </div>
+
+                            <!-- L2 — dimmed -->
+                            <div class="flex items-center px-6 py-2 rounded-lg text-left" style="opacity:0.3;background:#F1F5F9;">
+                                <div class="text-sm font-medium">L2 — Enlace</div>
+                            </div>
+
+                            <!-- L3 — dimmed -->
+                            <div class="flex items-center px-6 py-2 rounded-lg text-left" style="opacity:0.3;background:#F1F5F9;">
+                                <div class="text-sm font-medium">L3 — Rede</div>
+                            </div>
+
+                            <!-- L4 — destaque slate -->
+                            <div class="flex items-center px-6 py-4 rounded-lg border-l-4 text-left" style="border-color:#475569;background:#F8FAFC;">
+                                <div>
+                                    <div class="font-bold text-lg" style="color:#475569;">L4 — Transporte</div>
+                                    <div class="text-sm" style="color:var(--text-secondary);">TCP/UDP — enxerga conexões</div>
+                                </div>
+                            </div>
+
+                            <!-- L5 — dimmed -->
+                            <div class="flex items-center px-6 py-2 rounded-lg text-left" style="opacity:0.3;background:#F1F5F9;">
+                                <div class="text-sm font-medium">L5 — Sessão</div>
+                            </div>
+
+                            <!-- L6 — dimmed -->
+                            <div class="flex items-center px-6 py-2 rounded-lg text-left" style="opacity:0.3;background:#F1F5F9;">
+                                <div class="text-sm font-medium">L6 — Apresentação</div>
+                            </div>
+
+                            <!-- L7 — destaque Go blue -->
+                            <div class="flex items-center px-6 py-4 rounded-lg border-l-4 text-left" style="border-color:var(--stone-primary);background:rgba(0,172,215,0.06);">
+                                <div>
+                                    <div class="font-bold text-lg" style="color:var(--stone-primary);">L7 — Aplicação</div>
+                                    <div class="text-sm" style="color:var(--text-secondary);">HTTP, gRPC — enxerga requests individuais</div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 9: Visão L4 -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <i class="ph-bold ph-package text-7xl text-slate-400 mb-6"></i>
+                        <h2 class="text-4xl font-bold mb-6">O que o Ingress enxerga em L4</h2>
+                        <p class="text-2xl text-secondary max-w-2xl mx-auto mb-8">
+                            Ele entrega pacotes TCP baseados em IP e Porta. O conteúdo (HTTP/2) é um <span class="font-bold text-slate-800">bloco opaco</span> de bytes cifrados.
+                        </p>
+                        <div class="inline-block p-4 bg-slate-800 text-slate-300 font-mono text-sm rounded-lg">
+                            [ENCRYPTED TCP PAYLOAD 10101010...]
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 10: Conclusão do Arco -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <h2 class="text-6xl font-black leading-tight">
+                            Não é o nginx.<br>
+                            Não é a configuração.<br>
+                            É a <span class="keyword-highlight">camada</span>.
+                        </h2>
+                    </div>
+                </section>
+
+                <!-- ARCO 4: STAR Moment (Demo 1) -->
+
+                <!-- Slide 11: Setup Demo 1 -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-4xl font-bold mb-8">Cenário da Demo #1: Produção Padrão</h2>
+                        
+                        <div class="terminal-window">
+                            <div class="terminal-header">
+                                <div class="terminal-dot dot-red"></div>
+                                <div class="terminal-dot dot-yellow"></div>
+                                <div class="terminal-dot dot-green"></div>
+                                <div class="ml-2 text-slate-400 text-sm">kubectl get pods</div>
+                            </div>
+                            <div class="terminal-body">
+                                NAME &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;READY &nbsp;&nbsp;STATUS &nbsp;&nbsp;&nbsp;AGE<br>
+                                go-api-6b47c9b8f-a1b2c &nbsp;&nbsp;&nbsp;1/1 &nbsp;&nbsp;&nbsp;&nbsp;Running &nbsp;&nbsp;10m<br>
+                                go-api-6b47c9b8f-x9y8z &nbsp;&nbsp;&nbsp;1/1 &nbsp;&nbsp;&nbsp;&nbsp;Running &nbsp;&nbsp;10m<br>
+                                go-api-6b47c9b8f-p3q4r &nbsp;&nbsp;&nbsp;1/1 &nbsp;&nbsp;&nbsp;&nbsp;Running &nbsp;&nbsp;10m
+                            </div>
+                        </div>
+                        <p class="mt-8 text-xl text-secondary">Aplicações Go respondendo com seu UUID interno.</p>
+                    </div>
+                </section>
+
+                <!-- Slide 12: Terminal Ao Vivo 1 -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <div class="terminal-window">
+                            <div class="terminal-header">
+                                <div class="terminal-dot dot-red"></div>
+                                <div class="terminal-dot dot-yellow"></div>
+                                <div class="terminal-dot dot-green"></div>
+                                <div class="ml-2 text-slate-400 text-sm">cliente-http2-loop</div>
+                            </div>
+                            <div class="terminal-body text-red-400">
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span><br>
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span><br>
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span><br>
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span>
+                            </div>
+                        </div>
+                        <h3 class="mt-8 text-2xl font-bold text-status-error">Evidência: 100% da carga presa em um único pod.</h3>
+                    </div>
+                </section>
+
+                <!-- ARCO 5: What Could Be -->
+
+                <!-- Slide 13: A Mudança para L7 -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <h2 class="text-5xl font-black mb-12">L4 vs L7</h2>
+                        <div class="space-y-6 text-3xl font-medium text-left max-w-2xl mx-auto">
+                            <p class="text-slate-400 line-through">L4 enxerga a conexão.</p>
+                            <p style="color:var(--stone-primary);">L7 enxerga o <span class="font-bold">request</span>.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 14: O que é Service Mesh -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-6xl">
+                        <h2 class="text-5xl font-bold mb-12">Service Mesh</h2>
+                        <div class="comparison-grid">
+                            <div class="comparison-card text-left">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <img src="https://raw.githubusercontent.com/cncf/artwork/main/projects/istio/icon/color/istio-icon-color.svg" alt="Istio" style="height:36px;width:auto;">
+                                    <h3 class="text-2xl font-bold highlight-text">Control Plane (Istiod)</h3>
+                                </div>
+                                <ul class="list-disc pl-5 space-y-3 text-lg text-secondary">
+                                    <li>Interage com a API do Kubernetes</li>
+                                    <li>Injeta o sidecar proxy em cada pod</li>
+                                    <li>Distribui as regras de roteamento</li>
+                                </ul>
+                            </div>
+                            <div class="comparison-card text-left">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <img src="https://raw.githubusercontent.com/cncf/artwork/main/projects/envoy/icon/color/envoy-icon-color.svg" alt="Envoy" style="height:36px;width:auto;">
+                                    <h3 class="text-2xl font-bold highlight-text">Data Plane (Envoy)</h3>
+                                </div>
+                                <ul class="list-disc pl-5 space-y-3 text-lg text-secondary">
+                                    <li>Roda junto com a aplicação no pod</li>
+                                    <li>Intercepta todo o tráfego de entrada e saída</li>
+                                    <li>Opera em L7 — <strong>enxerga o request</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 15: Arquitetura Sidecar -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-4xl font-bold mb-2">Arquitetura de Sidecar</h2>
+                        <p class="text-base mb-6" style="color:var(--text-secondary);">O Envoy intercepta todo o tráfego — transparente para a aplicação</p>
+
+                        <div class="flex items-center gap-3">
+
+                            <!-- Setas de tráfego (fora do pod) -->
+                            <div class="flex flex-col gap-8 items-end" style="min-width:80px;">
+                                <div class="flex flex-col items-end gap-1">
+                                    <span class="font-mono text-xs font-bold" style="color:var(--stone-primary);">request</span>
+                                    <div class="flex items-center">
+                                        <div style="width:40px;height:2px;background:var(--stone-primary);"></div>
+                                        <div style="border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid var(--stone-primary);"></div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-end gap-1">
+                                    <div class="flex items-center">
+                                        <div style="border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:8px solid #94A3B8;"></div>
+                                        <div style="width:40px;height:2px;background:#94A3B8;"></div>
+                                    </div>
+                                    <span class="font-mono text-xs" style="color:#94A3B8;">response</span>
+                                </div>
+                            </div>
+
+                            <!-- Pod boundary -->
+                            <div class="flex-1 relative rounded-2xl px-6 py-6" style="border:2px dashed #CBD5E1;background:#FAFAFA;">
+
+                                <!-- Pod label -->
+                                <div class="absolute px-3 py-0.5 rounded text-xs font-bold uppercase tracking-widest bg-white" style="top:-11px;left:20px;color:#94A3B8;border:1px solid #CBD5E1;">Pod</div>
+
+                                <div class="flex items-stretch gap-3">
+
+                                    <!-- Container: Envoy -->
+                                    <div class="flex-1 flex flex-col items-center py-5 px-4 rounded-xl" style="border:2px solid var(--stone-primary);background:rgba(0,172,215,0.05);">
+                                        <div class="text-xs font-bold uppercase tracking-widest mb-3 px-2 py-0.5 rounded" style="color:var(--stone-primary);background:rgba(0,172,215,0.12);">container</div>
+                                        <img src="https://raw.githubusercontent.com/cncf/artwork/main/projects/envoy/icon/color/envoy-icon-color.svg" alt="Envoy" style="height:40px;width:auto;margin-bottom:8px;">
+                                        <div class="font-bold text-lg mb-1" style="color:var(--stone-primary);">Envoy Proxy</div>
+                                        <div class="font-mono text-sm mb-4" style="color:var(--text-secondary);">:15001</div>
+                                        <div class="flex gap-1.5 flex-wrap justify-center">
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-bold" style="background:rgba(0,172,215,0.12);color:var(--stone-primary);">L7</span>
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-bold" style="background:rgba(0,172,215,0.12);color:var(--stone-primary);">mTLS</span>
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-bold" style="background:rgba(0,172,215,0.12);color:var(--stone-primary);">retry</span>
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-bold" style="background:rgba(0,172,215,0.12);color:var(--stone-primary);">metrics</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- iptables hijack connector -->
+                                    <div class="flex flex-col items-center justify-center gap-2 px-1">
+                                        <div style="border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:8px solid #CBD5E1;"></div>
+                                        <div class="py-1.5 px-2 rounded-lg font-mono text-xs font-bold text-center leading-tight" style="background:#0F172A;color:#64748B;white-space:nowrap;">iptables<br>hijack</div>
+                                        <div style="border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #CBD5E1;"></div>
+                                    </div>
+
+                                    <!-- Container: App Go -->
+                                    <div class="flex-1 flex flex-col items-center py-5 px-4 rounded-xl" style="border:2px solid #CBD5E1;background:white;">
+                                        <div class="text-xs font-bold uppercase tracking-widest mb-3 px-2 py-0.5 rounded" style="color:#94A3B8;background:#F1F5F9;">container</div>
+                                        <img src="https://go.dev/images/gophers/pilot-bust.svg" alt="Go" style="height:40px;width:auto;margin-bottom:8px;">
+                                        <div class="font-bold text-lg mb-1" style="color:#334155;">App Go</div>
+                                        <div class="font-mono text-sm mb-4" style="color:var(--text-secondary);">:8080</div>
+                                        <div class="flex gap-1.5 justify-center">
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-bold" style="background:#F1F5F9;color:#64748B;">zero código</span>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 16: Trade-offs -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-6xl">
+                        <h2 class="text-4xl font-bold mb-12">Por que isso não é over-engineering</h2>
+                        <div class="comparison-grid">
+                            <div class="comparison-card text-left bg-slate-50">
+                                <h3 class="text-xl font-bold mb-4 text-slate-500 uppercase tracking-wider text-sm">O que você paga</h3>
+                                <ul class="space-y-3 text-lg text-slate-600">
+                                    <li><i class="ph-bold ph-minus text-red-400 mr-2"></i> Sidecar por pod (CPU/Mem extra)</li>
+                                    <li><i class="ph-bold ph-minus text-red-400 mr-2"></i> Control plane no cluster</li>
+                                    <li><i class="ph-bold ph-minus text-red-400 mr-2"></i> Curva de aprendizado</li>
+                                </ul>
+                            </div>
+                            <div class="comparison-card text-left" style="background:rgba(0,172,215,0.05);border-color:rgba(0,172,215,0.2);">
+                                <h3 class="text-xl font-bold mb-4 uppercase tracking-wider text-sm highlight-text">O que você ganha</h3>
+                                <ul class="space-y-3 text-lg text-slate-800 font-medium">
+                                    <li><i class="ph-bold ph-check mr-2 highlight-text"></i> Load balancing por request</li>
+                                    <li><i class="ph-bold ph-check mr-2 highlight-text"></i> mTLS automático</li>
+                                    <li><i class="ph-bold ph-check mr-2 highlight-text"></i> Circuit breaking & Retry</li>
+                                    <li class="pt-2 font-bold highlight-text border-t mt-2" style="border-color:rgba(0,172,215,0.2);">Sem uma linha de código Go.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ARCO 6: Answer -->
+
+                <!-- Slide 17: Algoritmos -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-6xl">
+                        <h2 class="text-4xl font-bold mb-4">Algoritmos de Balanceamento em L7</h2>
+                        <p class="text-xl text-secondary mb-8">Aplicados diretamente nas conexões HTTP/2 ativas.</p>
+                        
+                        <div class="pillars-grid">
+                            <div class="pillar-card">
+                                <h3 class="text-xl font-bold mb-2">ROUND_ROBIN</h3>
+                                <p class="text-secondary text-sm">Distribui sequencialmente por request. Aceita pesos.</p>
+                            </div>
+                            <div class="pillar-card">
+                                <h3 class="text-xl font-bold mb-2">LEAST_CONN</h3>
+                                <p class="text-secondary text-sm">Envia para o pod com menos requests ativos no momento.</p>
+                            </div>
+                            <div class="pillar-card">
+                                <h3 class="text-xl font-bold mb-2">RANDOM</h3>
+                                <p class="text-secondary text-sm">Distribuição aleatória padronizada.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 18: YAML -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <h2 class="text-3xl font-bold mb-6">Controle via YAML (DestinationRule + VirtualService)</h2>
+                        <div class="code-block text-sm">
+<span style="color:#94A3B8;"># DestinationRule</span>
+kind: DestinationRule
+spec:
+  host: go-api
+  trafficPolicy:
+    loadBalancer:
+      simple: ROUND_ROBIN
+  subsets:
+  - { name: v1, labels: { version: v1 } }
+  - { name: v2, labels: { version: v2 } }
+  - { name: v3, labels: { version: v3 } }
+---
+<span style="color:#94A3B8;"># VirtualService</span>
+kind: VirtualService
+spec:
+  hosts: [go-api]
+  http:
+  - route:
+    - destination: { host: go-api, subset: v1 }
+      <span class="font-bold highlight-text">weight: 60</span>
+    - destination: { host: go-api, subset: v2 }
+      <span class="font-bold highlight-text">weight: 20</span>
+    - destination: { host: go-api, subset: v3 }
+      <span class="font-bold highlight-text">weight: 20</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ARCO 7: Answer -> New Bliss (Demo 2) -->
+
+                <!-- Slide 19: Setup Demo 2 -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-4xl font-bold mb-8">Cenário da Demo #2: Istio Injetado</h2>
+                        
+                        <div class="terminal-window">
+                            <div class="terminal-header">
+                                <div class="terminal-dot dot-red"></div>
+                                <div class="terminal-dot dot-yellow"></div>
+                                <div class="terminal-dot dot-green"></div>
+                                <div class="ml-2 text-slate-400 text-sm">kubectl get pods</div>
+                            </div>
+                            <div class="terminal-body">
+                                NAME &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;READY &nbsp;&nbsp;STATUS &nbsp;&nbsp;&nbsp;AGE<br>
+                                go-api-8f99d9b8f-a1b2c &nbsp;&nbsp;&nbsp;<span class="text-stone-primary font-bold">2/2</span> &nbsp;&nbsp;&nbsp;&nbsp;Running &nbsp;&nbsp;1m<br>
+                                go-api-8f99d9b8f-x9y8z &nbsp;&nbsp;&nbsp;<span class="text-stone-primary font-bold">2/2</span> &nbsp;&nbsp;&nbsp;&nbsp;Running &nbsp;&nbsp;1m<br>
+                                go-api-8f99d9b8f-p3q4r &nbsp;&nbsp;&nbsp;<span class="text-stone-primary font-bold">2/2</span> &nbsp;&nbsp;&nbsp;&nbsp;Running &nbsp;&nbsp;1m
+                            </div>
+                        </div>
+                        <p class="mt-8 text-xl text-secondary">Mesmos pods, mesmo código. Agora com 2 containers (App + Envoy).</p>
+                    </div>
+                </section>
+
+                <!-- Slide 20: Terminal Ao Vivo 2 -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <div class="terminal-window">
+                            <div class="terminal-header">
+                                <div class="terminal-dot dot-red"></div>
+                                <div class="terminal-dot dot-yellow"></div>
+                                <div class="terminal-dot dot-green"></div>
+                                <div class="ml-2 text-slate-400 text-sm">cliente-http2-loop (com pesos 60/20/20)</div>
+                            </div>
+                            <div class="terminal-body text-green-400">
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span><br>
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-slate-400 font-bold">x9y8z</span><br>
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span><br>
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-slate-400 font-bold">p3q4r</span><br>
+                                > GET /api/v1/health<br>
+                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span>
+                            </div>
+                        </div>
+                        <h3 class="mt-8 text-2xl font-bold highlight-text">Evidência: O tráfego foi perfeitamente distribuído em L7.</h3>
+                    </div>
+                </section>
+
+                <!-- Slide 21: O Contraste -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-5xl">
+                        <h2 class="text-5xl font-bold mb-12">O contraste</h2>
+                        <div class="comparison-grid">
+                            <div class="comparison-card">
+                                <h3 class="text-2xl font-bold mb-6 text-slate-600">Padrão K8s (L4)</h3>
+                                <div class="flex items-end justify-center gap-4 h-48 border-b border-slate-200">
+                                    <div class="w-16 rounded-t-md" style="height:100%;background:#94A3B8;"></div>
+                                    <div class="w-16 rounded-t-md" style="height:5%;background:#E2E8F0;"></div>
+                                    <div class="w-16 rounded-t-md" style="height:5%;background:#E2E8F0;"></div>
+                                </div>
+                                <p class="mt-4 text-sm font-bold">1 Conexão = 1 Pod a 100%</p>
+                            </div>
+                            <div class="comparison-card" style="border-top: 4px solid var(--stone-primary);">
+                                <h3 class="text-2xl font-bold mb-6 highlight-text">Service Mesh (L7)</h3>
+                                <div class="flex items-end justify-center gap-4 h-48 border-b border-slate-200">
+                                    <div class="w-16 rounded-t-md" style="height:60%;background:var(--stone-primary);"></div>
+                                    <div class="w-16 rounded-t-md" style="height:20%;background:rgba(0,172,215,0.45);"></div>
+                                    <div class="w-16 rounded-t-md" style="height:20%;background:rgba(0,172,215,0.45);"></div>
+                                </div>
+                                <p class="mt-4 text-sm font-bold highlight-text">1 Conexão = Requests Distribuídos (60/20/20)</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ARCO 8: New Bliss / CTA -->
+
+                <!-- Slide 22: A Tese -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <i class="ph-fill ph-quotes text-7xl text-slate-300 mb-6"></i>
+                        <h2 class="text-5xl font-bold leading-tight mb-8">
+                            Seu código Go cuida da lógica de negócio.<br>
+                            A <span class="keyword-highlight">infraestrutura</span> cuida do tráfego.
+                        </h2>
+                        <p class="text-2xl text-secondary">A solução para roteamento, retry e resiliência não é mais código.</p>
+                    </div>
+                </section>
+
+                <!-- Slide 23: Referências -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-4xl">
+                        <h2 class="text-4xl font-bold mb-12">Obrigado! Dúvidas?</h2>
+                        
+                        <div class="flex flex-col items-center justify-center gap-6">
+                            <div class="p-4 bg-white rounded-xl shadow border border-slate-100">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://dev.to/visepol/load-balancing-grpc-traffic-with-istio-1k49" alt="QR Code" width="200" height="200" style="display:block;">
+                            </div>
+                            <div class="text-lg font-bold text-slate-500 uppercase tracking-widest mt-2">Leia o artigo</div>
+
+                            <div class="flex gap-8 mt-6">
+                                <div class="flex items-center gap-2 text-xl font-medium">
+                                    <i class="ph-fill ph-github-logo text-3xl text-slate-700"></i> @visepol
+                                </div>
+                                <div class="flex items-center gap-2 text-xl font-medium">
+                                    <i class="ph-fill ph-linkedin-logo text-3xl text-slate-700"></i> /in/vinicius-lopes-eng
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+
+            <!-- Footer Navigation -->
+            <div class="footer" data-state="hidden">
+                <div class="footer__indicator"></div>
+                <div class="footer__container glass">
+                    <button class="btn btn--sm btn--primary" id="prev-btn">
+                        <i class="ph ph-caret-left"></i>
+                    </button>
+                    <div class="slide-info">
+                        <span class="current-slide" id="current-slide">1</span>
+                        <span class="divider">/</span>
+                        <span class="total-slides" id="total-slides">25</span>
+                    </div>
+                    <button class="btn btn--sm btn--primary" id="next-btn">
+                        <i class="ph ph-caret-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Notes panel (practice mode) -->
+    <button class="notes-panel__toggle" id="notes-toggle" aria-label="Alternar speaker notes">
+        <i class="ph-fill ph-note-pencil"></i>
+    </button>
+    <aside class="notes-panel" id="notes-panel" data-hidden="false">
+        <div class="notes-panel__arc" id="notes-arc">Arco —</div>
+        <div class="notes-panel__slide-title" id="notes-title">—</div>
+
+        <div class="notes-panel__section">
+            <div class="notes-panel__label">Speaker note</div>
+            <div class="notes-panel__note" id="notes-text">—</div>
+        </div>
+
+        <div class="notes-panel__section">
+            <div class="notes-panel__label">Transição</div>
+            <div class="notes-panel__transition" id="notes-transition">—</div>
+        </div>
+
+        <div class="notes-panel__hint">
+            Pressione <kbd>N</kbd> para mostrar/esconder
+        </div>
+    </aside>
+
+    <!-- Scripts -->
+    <script>
+        const SPEAKER_NOTES = [
+            {
+                arc: 'Arco 1 — What Is (~6 min)',
+                title: '1.1 — Título + apresentador',
+                note: 'Apresentação pessoal breve + setup da narrativa da talk.',
+                transition: 'Ponte ao histórico — "antes do HTTP/2, vale lembrar de onde tudo veio."'
+            },
+            {
+                arc: 'Arco 1 — What Is (~6 min)',
+                title: '1.2 — HTTP + HTML: a web simples',
+                note: 'A web nasceu de duas peças de texto. Stateless, legível, request/response — a simplicidade foi o que permitiu escalar. Guardem "stateless": cada request é independente.',
+                transition: 'Virada — mas abrir uma conexão tem um custo, e esse custo tem nome: handshake.'
+            },
+            {
+                arc: 'Arco 1 — What Is (~6 min)',
+                title: '1.3 — Toda conexão nasce e morre',
+                note: 'O handshake (SYN, SYN-ACK, ACK) abre a conexão, o conteúdo passa (GET → 200) e ela morre (FIN). O ponto: recebeu o conteúdo, a conexão acaba — o próximo request começa tudo de novo, outro handshake. Esse custo repetido é a dor.',
+                transition: 'Antecipação — "pagar o handshake a cada request é caro. Foi isso que a evolução veio resolver."'
+            },
+            {
+                arc: 'Arco 1 — What Is (~6 min)',
+                title: '1.4 — O stack Go',
+                note: 'Custo concreto do HTTP/1.1 — handshakes, overhead, conexões simultâneas.',
+                transition: 'Virada — multiplexação é vantagem, mas a conexão persistente tem uma propriedade que vai importar.'
+            },
+            {
+                arc: 'Arco 1 — What Is (~6 min)',
+                title: '1.5 — Go em produção',
+                note: 'O ambiente parece saudável — mas tem algo acontecendo que o diagrama não mostra.',
+                transition: 'Pergunta retórica — "qual pod está respondendo mais requests agora?"'
+            },
+            {
+                arc: 'Arco 2 — What Is → Complication (~6 min)',
+                title: '2.1 — Multiplexação revisitada',
+                note: 'Custo evitado pelo HTTP/2 + comportamento padrão do runtime Go com TLS.',
+                transition: 'Pergunta — "o que acontece com os outros pods quando a carga aumenta?"'
+            },
+            {
+                arc: 'Arco 2 — What Is → Complication (~6 min)',
+                title: '2.2 — O que o ingress enxerga',
+                note: 'Analogia da rodovia — ingress vê um carro, não sabe quantos passageiros estão dentro.',
+                transition: 'Consequência — "o que acontece em produção quando a carga aumenta?"'
+            },
+            {
+                arc: 'Arco 2 — What Is → Complication (~6 min)',
+                title: '2.3 — Um pod absorve tudo',
+                note: 'CPU média de 33% parece saudável — a média esconde um pod a 100% e dois em zero.',
+                transition: 'Provocação — escalar horizontalmente não resolve; a conexão já está estabelecida.'
+            },
+            {
+                arc: 'Arco 2 — What Is → Complication (~6 min)',
+                title: '2.4 — A pergunta que você não consegue responder',
+                note: 'Ponte para a demo — essas perguntas terão resposta visível em tempo real.',
+                transition: 'Pergunta à audiência — "alguém já ouviu falar de L4 e L7 do modelo OSI?"'
+            },
+            {
+                arc: 'Arco 3 — Complication escalada (~5 min)',
+                title: '3.1 — A pilha OSI',
+                note: 'Recorte intencional (L1-L3, L5-L6 ignorados) + ponte ingress em L4 vs. Istio em L7.',
+                transition: 'Afirmação — "L4 enxerga fluxo TCP. Não enxerga HTTP, requests ou headers."'
+            },
+            {
+                arc: 'Arco 3 — Complication escalada (~5 min)',
+                title: '3.2 — O que o ingress nginx enxerga',
+                note: 'Analogia dos Correios — carteiro entrega pelo endereço, não abre o envelope.',
+                transition: 'Generalização — nginx, HAProxy, qualquer L4 tem o mesmo limite; a camada define o que é possível.'
+            },
+            {
+                arc: 'Arco 3 — Complication escalada (~5 min)',
+                title: '3.3 — Não é o nginx, é a camada',
+                note: 'Ponte para a solução — a solução não é corrigir o proxy, é operar em outra camada.',
+                transition: 'Ação — "vamos ver o problema ao vivo. UUID mostrando qual pod responde cada request."'
+            },
+            {
+                arc: 'Arco 4 — STAR (~5 min)',
+                title: '4.1 — Setup da demo',
+                note: 'Contrato da demo — cada pod responde com UUID próprio, o padrão fica claro rapidamente.',
+                transition: 'Ação direta — "ambiente pronto. Vou abrir o terminal agora."'
+            },
+            {
+                arc: 'Arco 4 — STAR (~5 min)',
+                title: '4.2 — Terminal ao vivo',
+                note: 'Narração direta — "reparem no UUID, é sempre o mesmo. Os outros dois pods estão ociosos agora mesmo."',
+                transition: 'Diagnóstico — "a solução não está no código, não está no nginx — está em operar em outra camada".'
+            },
+            {
+                arc: 'Arco 5 — What Could Be (~6 min)',
+                title: '5.1 — L4 vs L7',
+                note: '"Você só pode agir sobre o que você enxerga — a camada define o que é possível, não a configuração".',
+                transition: 'Afirmação — "existe uma camada de infraestrutura projetada para operar em L7".'
+            },
+            {
+                arc: 'Arco 5 — What Could Be (~6 min)',
+                title: '5.2 — O que é service mesh',
+                note: 'Transparência para o código Go (zero mudança) + fluxo de controle: Istiod distribui regras, sidecars executam localmente.',
+                transition: 'Zoom — "como o sidecar se posiciona dentro do pod e intercepta o tráfego sem que a aplicação saiba".'
+            },
+            {
+                arc: 'Arco 5 — What Could Be (~6 min)',
+                title: '5.3 — Arquitetura de sidecar',
+                note: 'Mecanismo iptables + zero mudança no código Go + capacidades do Envoy em L7 (load balancing, circuit breaking, retry, mTLS).',
+                transition: 'Sequência — "adotar isso não é complexidade, é devolver responsabilidade para a camada certa".'
+            },
+            {
+                arc: 'Arco 5 — What Could Be (~6 min)',
+                title: '5.4 — Por que isso não é over-engineering',
+                note: 'Comparação com alternativas — você paga o custo de qualquer forma, só que no código em vez da infra.',
+                transition: 'Ação — "agora vamos ver o Istio configurado e a demo com distribuição real de carga".'
+            },
+            {
+                arc: 'Arco 6 — Answer (~4 min)',
+                title: '6.1 — Algoritmos de balanceamento em L7',
+                note: '"Para usar LEAST_CONN no Istio, você declara no campo loadBalancer da DestinationRule. A demo usará ROUND_ROBIN com pesos 60/20/20 para tornar o efeito visível ao vivo."',
+                transition: 'Antecipação — "o YAML exato que será aplicado na demo, com pesos diferentes para cada pod".'
+            },
+            {
+                arc: 'Arco 6 — Answer (~4 min)',
+                title: '6.2 — DestinationRule + VirtualService',
+                note: '"DestinationRule define subsets com ROUND_ROBIN. VirtualService distribui 60/20/20. kubectl apply sem restart de pod."',
+                transition: 'Antecipação — "três pods, pesos 60/20/20, ROUND_ROBIN em L7. O mesmo ambiente da primeira demo — com uma configuração diferente. Vamos ver."'
+            },
+            {
+                arc: 'Arco 7 — Answer → New Bliss (~6 min)',
+                title: '7.1 — Setup da demo',
+                note: '"Mesmo cluster, mesmos pods, mesmo cliente. Única diferença: Istio. Nenhuma linha de código Go mudou."',
+                transition: 'Ação direta — "ambiente pronto. Vou abrir o terminal agora."'
+            },
+            {
+                arc: 'Arco 7 — Answer → New Bliss (~6 min)',
+                title: '7.2 — Terminal ao vivo',
+                note: '"Reparem nos UUIDs — agora são três alternando. Pod A com 60%, os outros dois dividem os 40%."',
+                transition: 'Afirmação — "mesmo ambiente, mesmo código Go. Uma camada diferente — carga distribuída".'
+            },
+            {
+                arc: 'Arco 7 — Answer → New Bliss (~6 min)',
+                title: '7.3 — O contraste',
+                note: '"Isso não é só load balancing — observabilidade, mTLS, circuit breaking, retry. Tudo via YAML, zero código."',
+                transition: 'Fechamento — "o problema estava na camada. A solução estava na camada. O código Go não mudou".'
+            },
+            {
+                arc: 'Arco 8 — New Bliss → CTA (~4 min)',
+                title: '8.1 — A tese',
+                note: '"A próxima vez que alguém propuser retry no código — a pergunta é: isso é responsabilidade do código ou da infra?"',
+                transition: 'Entrega — "repositório, artigo e contato no próximo slide. Levem para casa".'
+            },
+            {
+                arc: 'Arco 8 — New Bliss → CTA (~4 min)',
+                title: '8.2 — Referências + contato',
+                note: '"Slide fica no ar durante as perguntas. Quem quiser fotografar o QR code, fique à vontade. Perguntas?"',
+                transition: 'Nenhuma — último slide, fica no ar durante o Q&A.'
+            }
+        ];
+
+        const App = {
+            config: {
+                PRESENTATION: { WIDTH: 1280, HEIGHT: 720 },
+                FOOTER: { HIDE_THRESHOLD: 150, SHOW_THRESHOLD: 100, HIDE_DELAY: 2000 },
+                SELECTORS: {
+                    SLIDES: '.slide', FOOTER: '.footer',
+                    PREV_BTN: '#prev-btn', NEXT_BTN: '#next-btn', DOWNLOAD_BTN: '#download-btn'
+                }
+            }
+        };
+
+        App.utils = {
+            $: (selector) => document.querySelector(selector),
+            $$: (selector) => document.querySelectorAll(selector),
+            animate: {
+                scale(element, from = 1, to = 1.1, duration = 150) {
+                    element.style.transform = `scale(${from})`;
+                    element.style.transition = `transform ${duration}ms var(--easing-default)`;
+                    requestAnimationFrame(() => { element.style.transform = `scale(${to})`; });
+                }
+            },
+            isValidSlide(index, total) { return index >= 0 && index < total; }
+        };
+
+        App.navigation = {
+            currentSlide: 0, totalSlides: 0, slides: null,
+            init() {
+                this.slides = App.utils.$$(App.config.SELECTORS.SLIDES);
+                this.totalSlides = this.slides.length;
+                this.bindEvents();
+                const hashSlide = parseInt(window.location.hash.replace('#', '')) - 1;
+                const initialSlide = hashSlide >= 0 && hashSlide < this.totalSlides ? hashSlide : 0;
+                this.showSlide(initialSlide);
+                App.utils.$('#total-slides').textContent = this.totalSlides;
+            },
+            bindEvents() {
+                const prevBtn = App.utils.$(App.config.SELECTORS.PREV_BTN);
+                const nextBtn = App.utils.$(App.config.SELECTORS.NEXT_BTN);
+                prevBtn.addEventListener('click', () => this.previousSlide());
+                nextBtn.addEventListener('click', () => this.nextSlide());
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowRight' || e.key === ' ') this.nextSlide();
+                    if (e.key === 'ArrowLeft') this.previousSlide();
+                });
+            },
+            showSlide(index) {
+                if (!App.utils.isValidSlide(index, this.totalSlides)) return;
+                this.slides.forEach((slide, i) => slide.classList.toggle('slide--active', i === index));
+                this.currentSlide = index;
+                window.location.hash = index + 1;
+                this.updateUI();
+                if (App.notes && App.notes.update) App.notes.update(index);
+            },
+            nextSlide() {
+                const nextIndex = this.currentSlide < this.totalSlides - 1 ? this.currentSlide + 1 : 0;
+                this.showSlide(nextIndex);
+            },
+            previousSlide() {
+                if (this.currentSlide > 0) this.showSlide(this.currentSlide - 1);
+            },
+            updateUI() {
+                const prevBtn = App.utils.$(App.config.SELECTORS.PREV_BTN);
+                const nextBtn = App.utils.$(App.config.SELECTORS.NEXT_BTN);
+                const currentSlideSpan = App.utils.$('#current-slide');
+                prevBtn.disabled = this.currentSlide === 0;
+                nextBtn.innerHTML = this.currentSlide === this.totalSlides - 1 ? '<i class="ph ph-arrow-clockwise"></i>' : '<i class="ph ph-caret-right"></i>';
+                currentSlideSpan.textContent = this.currentSlide + 1;
+                App.utils.animate.scale(currentSlideSpan, 1, 1.1, 150);
+                setTimeout(() => App.utils.animate.scale(currentSlideSpan, 1.1, 1, 150), 150);
+            }
+        };
+
+        App.footer = {
+            element: null, state: 'hidden', hideTimeout: null, mouseY: window.innerHeight,
+            init() {
+                this.element = App.utils.$(App.config.SELECTORS.FOOTER);
+                this.bindEvents();
+                setTimeout(() => this.setState('hidden'), 500);
+            },
+            bindEvents() {
+                document.addEventListener('mousemove', (e) => { this.mouseY = e.clientY; this.updateVisibility(); });
+                document.addEventListener('mouseleave', () => { this.mouseY = window.innerHeight; this.updateVisibility(); });
+                this.element.addEventListener('mouseenter', () => clearTimeout(this.hideTimeout));
+                this.element.addEventListener('mouseleave', () => this.scheduleHide());
+            },
+            updateVisibility() {
+                const distanceFromBottom = window.innerHeight - this.mouseY;
+                clearTimeout(this.hideTimeout);
+                if (distanceFromBottom <= App.config.FOOTER.SHOW_THRESHOLD) this.setState('full');
+                else this.scheduleHide();
+            },
+            setState(newState) {
+                if (this.state === newState) return;
+                this.state = newState;
+                this.element.setAttribute('data-state', newState);
+            },
+            scheduleHide(delay = App.config.FOOTER.HIDE_DELAY) {
+                this.hideTimeout = setTimeout(() => this.setState('hidden'), delay);
+            }
+        };
+
+        App.download = {
+            init() {
+                const downloadBtn = App.utils.$(App.config.SELECTORS.DOWNLOAD_BTN);
+                if (!downloadBtn) return;
+                downloadBtn.addEventListener('click', () => {
+                    const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'load-balancing-go-istio.html';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+            }
+        };
+
+        App.scaler = {
+            wrapper: null,
+            init() {
+                this.wrapper = App.utils.$('#presentation-wrapper');
+                window.addEventListener('resize', () => this.rescale());
+                this.rescale();
+            },
+            rescale() {
+                if (!this.wrapper) return;
+                const panelWidth = (App.notes && !App.notes.hidden) ? App.notes.PANEL_WIDTH : 0;
+                const availableWidth = window.innerWidth - panelWidth;
+                const scaleValue = Math.min(
+                    (availableWidth - 64) / App.config.PRESENTATION.WIDTH,
+                    (window.innerHeight - 32) / App.config.PRESENTATION.HEIGHT
+                );
+                this.wrapper.style.transform = `scale(${scaleValue})`;
+                this.wrapper.style.left = `${(availableWidth - (App.config.PRESENTATION.WIDTH * scaleValue)) / 2}px`;
+                this.wrapper.style.top = `${(window.innerHeight - (App.config.PRESENTATION.HEIGHT * scaleValue)) / 2}px`;
+                this.wrapper.style.position = 'absolute';
+            }
+        };
+
+        App.notes = {
+            PANEL_WIDTH: 360,
+            panel: null,
+            toggleBtn: null,
+            hidden: false,
+            arcEl: null,
+            titleEl: null,
+            textEl: null,
+            transitionEl: null,
+            init() {
+                this.panel = App.utils.$('#notes-panel');
+                this.toggleBtn = App.utils.$('#notes-toggle');
+                this.arcEl = App.utils.$('#notes-arc');
+                this.titleEl = App.utils.$('#notes-title');
+                this.textEl = App.utils.$('#notes-text');
+                this.transitionEl = App.utils.$('#notes-transition');
+                if (!this.panel) return;
+                this.panel.dataset.hidden = 'false';
+                this.bindEvents();
+            },
+            bindEvents() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'n' || e.key === 'N') {
+                        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+                        e.preventDefault();
+                        this.toggle();
+                    }
+                });
+                if (this.toggleBtn) this.toggleBtn.addEventListener('click', () => this.toggle());
+            },
+            update(index) {
+                const data = SPEAKER_NOTES[index];
+                if (!data || !this.panel) return;
+                this.arcEl.textContent = data.arc;
+                this.titleEl.textContent = data.title;
+                this.textEl.textContent = data.note;
+                this.transitionEl.textContent = data.transition;
+            },
+            toggle() {
+                if (!this.panel) return;
+                this.hidden = !this.hidden;
+                this.panel.dataset.hidden = String(this.hidden);
+                if (App.scaler) App.scaler.rescale();
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            App.notes.init();
+            App.scaler.init();
+            App.navigation.init();
+            App.footer.init();
+            App.download.init();
+        });
+    </script>
+</body>
+</html>
