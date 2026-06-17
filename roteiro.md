@@ -101,12 +101,12 @@ Demo ao vivo onde a audiência vê, em tempo real, que sem Istio todos os respon
 | 2 | Conexões persistentes: a vantagem que vira armadilha | What Is → Complication | 4 | ~6 min |
 | 3 | Por que o proxy não consegue ajudar | Complication (escalada) | 3 | ~5 min |
 | 4 | Demo — vendo carga ir para um único pod em tempo real | STAR | 2 | ~5 min |
-| 5 | O que muda quando você opera em L7 | What Could Be | 4 | ~6 min |
+| 5 | O que muda quando você opera em L7 | What Could Be | 5 | ~7 min |
 | 6 | Sidecar proxy — como L7 vira realidade sem mudar o código | Answer | 2 | ~4 min |
 | 7 | Demo — vendo a carga distribuída em tempo real | Answer → New Bliss | 3 | ~6 min |
 | 8 | A infra cuida do que é da infra | New Bliss → Call to Action | 2 | ~4 min |
 
-**Total: 25 slides / ~42 min** *(os 2 slides de fundamentos do Arco 1 somam ~+2 min ao tempo de talk)*
+**Total: 26 slides / ~44 min** *(2 slides de fundamentos no Arco 1 + 1 slide de visão macro do mesh no Arco 5)*
 
 ---
 
@@ -342,7 +342,7 @@ Cliente                    Servidor
 
 ---
 
-### Arco 5 — What Could Be (~6 min)
+### Arco 5 — What Could Be (~7 min)
 **`O que muda quando você opera em L7`**
 *Resumo: A audiência entende por que L7 é a camada certa para esse problema — e que service mesh não é over-engineering, é a solução arquiteturalmente adequada para o que foi demonstrado.*
 
@@ -397,11 +397,37 @@ Data Plane (sidecar Envoy)
 | Imagem/ícone | Logo Go no container da aplicação, logo Envoy no sidecar |
 | Animação | Build em etapas: pod → containers → setas de tráfego |
 | Speaker note | Mecanismo iptables + zero mudança no código Go + capacidades do Envoy em L7 (load balancing, circuit breaking, retry, mTLS) |
-| Transição | Sequência — "adotar isso não é complexidade, é devolver responsabilidade para a camada certa" |
+| Transição | Afastar a câmera — "agora veja como esses sidecars formam a malha inteira no cluster" |
 
 ---
 
-#### Slide 5.4 — Por que isso não é over-engineering
+#### Slide 5.4 — A malha completa
+
+| Campo | Decisão |
+|---|---|
+| Conteúdo | Visão macro do mesh — control plane (Istiod) configura todos os sidecars; proxies (Envoy) formam o data plane e trocam mesh traffic; tudo dentro da camada de rede |
+| Formato visual | Diagrama: Control Plane no topo, 3 pods (Proxy + App), setas de configuração (control plane → pods) e setas douradas de mesh traffic entre proxies, dentro de uma fronteira "network layer" |
+| Imagem/ícone | Logo Istio na fronteira; logo Envoy nos proxies; logo Go nos apps |
+| Animação | De uma vez — fadeIn (pode evoluir para build: control plane → fan-out → pods → mesh traffic) |
+| Speaker note | Um control plane configura todos os sidecars (config, discovery, certificados). Os proxies interceptam todo o tráfego, inclusive entre serviços (mesh traffic), transparente para o App |
+| Transição | Sequência — "adotar isso não é complexidade, é devolver responsabilidade para a camada certa" |
+
+**Estrutura:**
+```
+                  ┌──────────── network layer ────────────┐
+                  │            Control Plane               │
+                  │   (config · discovery · certificados)  │
+                  │     ↙           ↓           ↘           │
+                  │  [Proxy]     [Proxy]      [Proxy]       │
+                  │   ⇄ mesh traffic ⇄  ⇄ mesh traffic ⇄   │
+                  │  [App]       [App]        [App]         │
+                  └────────────────────────────────────────┘
+                     pod          pod           pod
+```
+
+---
+
+#### Slide 5.5 — Por que isso não é over-engineering
 
 | Campo | Decisão |
 |---|---|

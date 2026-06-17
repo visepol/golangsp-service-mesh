@@ -1006,7 +1006,7 @@
                                 go-api-6b47c9b8f-p3q4r &nbsp;&nbsp;&nbsp;1/1 &nbsp;&nbsp;&nbsp;&nbsp;Running &nbsp;&nbsp;10m
                             </div>
                         </div>
-                        <p class="mt-8 text-xl text-secondary">Aplicações Go respondendo com seu UUID interno.</p>
+                        <p class="mt-8 text-xl text-secondary">Aplicações Go respondendo com a seleção que representam.</p>
                     </div>
                 </section>
 
@@ -1021,14 +1021,10 @@
                                 <div class="ml-2 text-slate-400 text-sm">cliente-http2-loop</div>
                             </div>
                             <div class="terminal-body text-red-400">
-                                > GET /api/v1/health<br>
-                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span><br>
-                                > GET /api/v1/health<br>
-                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span><br>
-                                > GET /api/v1/health<br>
-                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span><br>
-                                > GET /api/v1/health<br>
-                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span>
+                                ⚽ GOL! Brasil x <span class="text-white font-bold">França</span> &nbsp;→&nbsp; placar: <span class="text-white font-bold">França 84</span><br>
+                                ⚽ GOL! Brasil x <span class="text-white font-bold">França</span> &nbsp;→&nbsp; placar: <span class="text-white font-bold">França 85</span><br>
+                                ⚽ GOL! Brasil x <span class="text-white font-bold">França</span> &nbsp;→&nbsp; placar: <span class="text-white font-bold">França 86</span><br>
+                                ⚽ GOL! Brasil x <span class="text-white font-bold">França</span> &nbsp;→&nbsp; placar: <span class="text-white font-bold">França 87</span>
                             </div>
                         </div>
                         <h3 class="mt-8 text-2xl font-bold text-status-error">Evidência: 100% da carga presa em um único pod.</h3>
@@ -1151,7 +1147,101 @@
                     </div>
                 </section>
 
-                <!-- Slide 16: Trade-offs -->
+                <!-- Slide 16: A malha completa (visão macro do mesh) -->
+                <section class="slide text-center">
+                    <div class="animated w-full max-w-6xl">
+                        <h2 class="text-4xl font-bold mb-2">A malha completa</h2>
+                        <p class="text-lg text-secondary mb-6">Um control plane configura todos os sidecars. Os proxies formam o data plane e interceptam todo o tráfego.</p>
+
+                        <div style="position:relative;width:960px;height:460px;margin:0 auto;">
+
+                            <!-- network layer boundary -->
+                            <div style="position:absolute;inset:0;border:2px dashed #94A3B8;border-radius:24px;background:rgba(0,172,215,0.04);z-index:0;"></div>
+
+                            <!-- Istio logo -->
+                            <img src="https://raw.githubusercontent.com/cncf/artwork/main/projects/istio/icon/color/istio-icon-color.svg" alt="Istio" style="position:absolute;top:18px;left:20px;height:40px;width:auto;z-index:3;">
+
+                            <!-- network layer pill -->
+                            <div style="position:absolute;top:-16px;right:32px;z-index:3;background:#fff;border:1px solid #CBD5E1;border-radius:999px;padding:4px 16px;" class="font-bold text-sm text-secondary">network layer</div>
+
+                            <!-- arrows layer -->
+                            <svg viewBox="0 0 960 460" width="960" height="460" style="position:absolute;inset:0;z-index:1;overflow:visible;">
+                                <defs>
+                                    <marker id="mt-gray" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+                                        <path d="M0,1 L10,6 L0,11 Z" fill="#475569"></path>
+                                    </marker>
+                                    <marker id="mt-gold" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+                                        <path d="M0,1 L10,6 L0,11 Z" fill="#CA8A04"></path>
+                                    </marker>
+                                </defs>
+                                <!-- control plane -> pods -->
+                                <line x1="480" y1="84" x2="140" y2="242" stroke="#475569" stroke-width="2" marker-end="url(#mt-gray)"></line>
+                                <line x1="480" y1="84" x2="480" y2="242" stroke="#475569" stroke-width="2" marker-end="url(#mt-gray)"></line>
+                                <line x1="480" y1="84" x2="820" y2="242" stroke="#475569" stroke-width="2" marker-end="url(#mt-gray)"></line>
+                                <!-- mesh traffic (gold, bidirectional) -->
+                                <text x="310" y="266" text-anchor="middle" fill="#A16207" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">mesh traffic</text>
+                                <line x1="246" y1="280" x2="372" y2="280" stroke="#CA8A04" stroke-width="3" marker-end="url(#mt-gold)"></line>
+                                <line x1="372" y1="294" x2="246" y2="294" stroke="#CA8A04" stroke-width="3" marker-end="url(#mt-gold)"></line>
+                                <line x1="586" y1="280" x2="712" y2="280" stroke="#CA8A04" stroke-width="3" marker-end="url(#mt-gold)"></line>
+                                <line x1="712" y1="294" x2="586" y2="294" stroke="#CA8A04" stroke-width="3" marker-end="url(#mt-gold)"></line>
+                            </svg>
+
+                            <!-- Control Plane -->
+                            <div style="position:absolute;left:320px;top:14px;width:320px;z-index:2;border:2px solid var(--stone-primary);background:#fff;border-radius:12px;padding:12px 16px;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+                                <div class="font-bold text-xl highlight-text">Control Plane</div>
+                                <div class="text-xs text-secondary mt-1">Configuração · Discovery · Certificados</div>
+                            </div>
+
+                            <!-- Pod 1 -->
+                            <div style="position:absolute;left:40px;top:244px;width:200px;z-index:2;">
+                                <div class="rounded-2xl" style="background:#F1F5F9;border:1px solid #E2E8F0;padding:10px;">
+                                    <div class="rounded-lg flex flex-col items-center gap-1" style="border:1.5px dashed var(--stone-primary);background:rgba(0,172,215,0.06);padding:8px;">
+                                        <img src="https://raw.githubusercontent.com/cncf/artwork/main/projects/envoy/icon/color/envoy-icon-color.svg" alt="Envoy" style="height:22px;width:auto;">
+                                        <span class="font-bold text-sm" style="color:var(--stone-primary);">Proxy</span>
+                                    </div>
+                                    <div class="rounded-lg flex flex-col items-center gap-1 mt-2" style="border:1.5px dashed #94A3B8;background:#fff;padding:8px;">
+                                        <img src="https://go.dev/images/gophers/pilot-bust.svg" alt="Go" style="height:22px;width:auto;">
+                                        <span class="font-bold text-sm" style="color:#475569;">App</span>
+                                    </div>
+                                </div>
+                                <div class="mx-auto mt-2 font-mono text-xs text-secondary" style="width:fit-content;background:#fff;border:1px solid #CBD5E1;border-radius:999px;padding:2px 14px;">pod</div>
+                            </div>
+
+                            <!-- Pod 2 -->
+                            <div style="position:absolute;left:380px;top:244px;width:200px;z-index:2;">
+                                <div class="rounded-2xl" style="background:#F1F5F9;border:1px solid #E2E8F0;padding:10px;">
+                                    <div class="rounded-lg flex flex-col items-center gap-1" style="border:1.5px dashed var(--stone-primary);background:rgba(0,172,215,0.06);padding:8px;">
+                                        <img src="https://raw.githubusercontent.com/cncf/artwork/main/projects/envoy/icon/color/envoy-icon-color.svg" alt="Envoy" style="height:22px;width:auto;">
+                                        <span class="font-bold text-sm" style="color:var(--stone-primary);">Proxy</span>
+                                    </div>
+                                    <div class="rounded-lg flex flex-col items-center gap-1 mt-2" style="border:1.5px dashed #94A3B8;background:#fff;padding:8px;">
+                                        <img src="https://go.dev/images/gophers/pilot-bust.svg" alt="Go" style="height:22px;width:auto;">
+                                        <span class="font-bold text-sm" style="color:#475569;">App</span>
+                                    </div>
+                                </div>
+                                <div class="mx-auto mt-2 font-mono text-xs text-secondary" style="width:fit-content;background:#fff;border:1px solid #CBD5E1;border-radius:999px;padding:2px 14px;">pod</div>
+                            </div>
+
+                            <!-- Pod 3 -->
+                            <div style="position:absolute;left:720px;top:244px;width:200px;z-index:2;">
+                                <div class="rounded-2xl" style="background:#F1F5F9;border:1px solid #E2E8F0;padding:10px;">
+                                    <div class="rounded-lg flex flex-col items-center gap-1" style="border:1.5px dashed var(--stone-primary);background:rgba(0,172,215,0.06);padding:8px;">
+                                        <img src="https://raw.githubusercontent.com/cncf/artwork/main/projects/envoy/icon/color/envoy-icon-color.svg" alt="Envoy" style="height:22px;width:auto;">
+                                        <span class="font-bold text-sm" style="color:var(--stone-primary);">Proxy</span>
+                                    </div>
+                                    <div class="rounded-lg flex flex-col items-center gap-1 mt-2" style="border:1.5px dashed #94A3B8;background:#fff;padding:8px;">
+                                        <img src="https://go.dev/images/gophers/pilot-bust.svg" alt="Go" style="height:22px;width:auto;">
+                                        <span class="font-bold text-sm" style="color:#475569;">App</span>
+                                    </div>
+                                </div>
+                                <div class="mx-auto mt-2 font-mono text-xs text-secondary" style="width:fit-content;background:#fff;border:1px solid #CBD5E1;border-radius:999px;padding:2px 14px;">pod</div>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slide 17: Trade-offs -->
                 <section class="slide text-center">
                     <div class="animated w-full max-w-6xl">
                         <h2 class="text-4xl font-bold mb-12">Por que isso não é over-engineering</h2>
@@ -1271,16 +1361,11 @@ spec:
                                 <div class="ml-2 text-slate-400 text-sm">cliente-http2-loop (com pesos 60/20/20)</div>
                             </div>
                             <div class="terminal-body text-green-400">
-                                > GET /api/v1/health<br>
-                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span><br>
-                                > GET /api/v1/health<br>
-                                [200 OK] Responding from Pod: <span class="text-slate-400 font-bold">x9y8z</span><br>
-                                > GET /api/v1/health<br>
-                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span><br>
-                                > GET /api/v1/health<br>
-                                [200 OK] Responding from Pod: <span class="text-slate-400 font-bold">p3q4r</span><br>
-                                > GET /api/v1/health<br>
-                                [200 OK] Responding from Pod: <span class="text-white font-bold">a1b2c</span>
+                                ⚽ GOL! Brasil x <span class="text-white font-bold">Alemanha</span>&nbsp; &nbsp;→&nbsp; placar: <span class="text-white font-bold">Alemanha 43</span> · Argentina 14 · França 13<br>
+                                ⚽ GOL! Brasil x <span class="text-slate-400 font-bold">Argentina</span> &nbsp;→&nbsp; placar: <span class="text-white font-bold">Alemanha 43</span> · Argentina 15 · França 13<br>
+                                ⚽ GOL! Brasil x <span class="text-white font-bold">Alemanha</span>&nbsp; &nbsp;→&nbsp; placar: <span class="text-white font-bold">Alemanha 44</span> · Argentina 15 · França 13<br>
+                                ⚽ GOL! Brasil x <span class="text-slate-400 font-bold">França</span>&nbsp;&nbsp;&nbsp; &nbsp;→&nbsp; placar: <span class="text-white font-bold">Alemanha 44</span> · Argentina 15 · França 14<br>
+                                ⚽ GOL! Brasil x <span class="text-white font-bold">Alemanha</span>&nbsp; &nbsp;→&nbsp; placar: <span class="text-white font-bold">Alemanha 45</span> · Argentina 15 · França 14
                             </div>
                         </div>
                         <h3 class="mt-8 text-2xl font-bold highlight-text">Evidência: O tráfego foi perfeitamente distribuído em L7.</h3>
@@ -1363,7 +1448,7 @@ spec:
                     <div class="slide-info">
                         <span class="current-slide" id="current-slide">1</span>
                         <span class="divider">/</span>
-                        <span class="total-slides" id="total-slides">25</span>
+                        <span class="total-slides" id="total-slides">26</span>
                     </div>
                     <button class="btn btn--sm btn--primary" id="next-btn">
                         <i class="ph ph-caret-right"></i>
@@ -1470,41 +1555,47 @@ spec:
                 arc: 'Arco 3 — Complication escalada (~5 min)',
                 title: '3.3 — Não é o nginx, é a camada',
                 note: 'Ponte para a solução — a solução não é corrigir o proxy, é operar em outra camada.',
-                transition: 'Ação — "vamos ver o problema ao vivo. UUID mostrando qual pod responde cada request."'
+                transition: 'Ação — "vamos ver o problema ao vivo. O cliente é o Brasil; cada gol mostra contra qual seleção (pod) o request caiu."'
             },
             {
                 arc: 'Arco 4 — STAR (~5 min)',
                 title: '4.1 — Setup da demo',
-                note: 'Contrato da demo — cada pod responde com UUID próprio, o padrão fica claro rapidamente.',
+                note: 'Contrato da demo — cada pod é uma seleção; o Brasil (cliente) faz um gol a cada request e o placar mostra contra quem. O padrão fica claro rapidamente.',
                 transition: 'Ação direta — "ambiente pronto. Vou abrir o terminal agora."'
             },
             {
                 arc: 'Arco 4 — STAR (~5 min)',
                 title: '4.2 — Terminal ao vivo',
-                note: 'Narração direta — "reparem no UUID, é sempre o mesmo. Os outros dois pods estão ociosos agora mesmo."',
+                note: 'Narração direta — "reparem no placar: todos os gols caem na mesma seleção (a França). As outras duas estão ociosas agora mesmo."',
                 transition: 'Diagnóstico — "a solução não está no código, não está no nginx — está em operar em outra camada".'
             },
             {
-                arc: 'Arco 5 — What Could Be (~6 min)',
+                arc: 'Arco 5 — What Could Be (~7 min)',
                 title: '5.1 — L4 vs L7',
                 note: '"Você só pode agir sobre o que você enxerga — a camada define o que é possível, não a configuração".',
                 transition: 'Afirmação — "existe uma camada de infraestrutura projetada para operar em L7".'
             },
             {
-                arc: 'Arco 5 — What Could Be (~6 min)',
+                arc: 'Arco 5 — What Could Be (~7 min)',
                 title: '5.2 — O que é service mesh',
                 note: 'Transparência para o código Go (zero mudança) + fluxo de controle: Istiod distribui regras, sidecars executam localmente.',
                 transition: 'Zoom — "como o sidecar se posiciona dentro do pod e intercepta o tráfego sem que a aplicação saiba".'
             },
             {
-                arc: 'Arco 5 — What Could Be (~6 min)',
+                arc: 'Arco 5 — What Could Be (~7 min)',
                 title: '5.3 — Arquitetura de sidecar',
                 note: 'Mecanismo iptables + zero mudança no código Go + capacidades do Envoy em L7 (load balancing, circuit breaking, retry, mTLS).',
+                transition: 'Afastar a câmera — "agora veja como esses sidecars formam a malha inteira no cluster".'
+            },
+            {
+                arc: 'Arco 5 — What Could Be (~7 min)',
+                title: '5.4 — A malha completa',
+                note: 'Visão macro: um control plane (Istiod) configura todos os sidecars — config, service discovery, certificados. Os proxies (Envoy) formam o data plane e interceptam todo o tráfego, inclusive entre serviços (mesh traffic). Tudo dentro da camada de rede, transparente para o App.',
                 transition: 'Sequência — "adotar isso não é complexidade, é devolver responsabilidade para a camada certa".'
             },
             {
-                arc: 'Arco 5 — What Could Be (~6 min)',
-                title: '5.4 — Por que isso não é over-engineering',
+                arc: 'Arco 5 — What Could Be (~7 min)',
+                title: '5.5 — Por que isso não é over-engineering',
                 note: 'Comparação com alternativas — você paga o custo de qualquer forma, só que no código em vez da infra.',
                 transition: 'Ação — "agora vamos ver o Istio configurado e a demo com distribuição real de carga".'
             },
@@ -1529,7 +1620,7 @@ spec:
             {
                 arc: 'Arco 7 — Answer → New Bliss (~6 min)',
                 title: '7.2 — Terminal ao vivo',
-                note: '"Reparem nos UUIDs — agora são três alternando. Pod A com 60%, os outros dois dividem os 40%."',
+                note: '"Reparem no placar — agora são três seleções. A Alemanha leva ~60% dos gols, Argentina e França dividem os 40%."',
                 transition: 'Afirmação — "mesmo ambiente, mesmo código Go. Uma camada diferente — carga distribuída".'
             },
             {
