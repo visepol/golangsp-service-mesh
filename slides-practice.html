@@ -1361,30 +1361,36 @@ spec:
                                 <div class="ml-2 text-slate-400 text-sm">cliente-http2-loop (com pesos 60/20/20)</div>
                             </div>
                             <div class="terminal-body text-green-400">
-                                ⚽ GOL! Brasil x <span class="text-white font-bold">Alemanha</span>&nbsp; &nbsp;→&nbsp; placar: <span class="text-white font-bold">Alemanha 43</span> · Argentina 14 · França 13<br>
-                                ⚽ GOL! Brasil x <span class="text-slate-400 font-bold">Argentina</span> &nbsp;→&nbsp; placar: <span class="text-white font-bold">Alemanha 43</span> · Argentina 15 · França 13<br>
-                                ⚽ GOL! Brasil x <span class="text-white font-bold">Alemanha</span>&nbsp; &nbsp;→&nbsp; placar: <span class="text-white font-bold">Alemanha 44</span> · Argentina 15 · França 13<br>
-                                ⚽ GOL! Brasil x <span class="text-slate-400 font-bold">França</span>&nbsp;&nbsp;&nbsp; &nbsp;→&nbsp; placar: <span class="text-white font-bold">Alemanha 44</span> · Argentina 15 · França 14<br>
-                                ⚽ GOL! Brasil x <span class="text-white font-bold">Alemanha</span>&nbsp; &nbsp;→&nbsp; placar: <span class="text-white font-bold">Alemanha 45</span> · Argentina 15 · França 14
+                                ⚽ GOL! Brasil x <span class="text-white font-bold">Alemanha</span>&nbsp; &nbsp;→&nbsp; placar: Alemanha 43 · Argentina 14 · França 13<br>
+                                ⚽ GOL! Brasil x <span class="text-slate-400 font-bold">Argentina</span> &nbsp;→&nbsp; placar: Alemanha 43 · Argentina 15 · França 13<br>
+                                ⚽ GOL! Brasil x <span class="text-white font-bold">Alemanha</span>&nbsp; &nbsp;→&nbsp; placar: Alemanha 44 · Argentina 15 · França 13<br>
+                                ⚽ GOL! Brasil x <span class="text-slate-400 font-bold">França</span>&nbsp;&nbsp;&nbsp; &nbsp;→&nbsp; placar: Alemanha 44 · Argentina 15 · França 14<br>
+                                ⚽ GOL! Brasil x <span class="text-white font-bold">Alemanha</span>&nbsp; &nbsp;→&nbsp; placar: Alemanha 45 · Argentina 15 · França 14
                             </div>
                         </div>
                         <h3 class="mt-8 text-2xl font-bold highlight-text">Evidência: O tráfego foi perfeitamente distribuído em L7.</h3>
                     </div>
                 </section>
 
-                <!-- Slide 21: O Contraste -->
+                <!-- Slide 24: O Placar -->
                 <section class="slide text-center">
                     <div class="animated w-full max-w-5xl">
-                        <h2 class="text-5xl font-bold mb-12">O contraste</h2>
+                        <h2 class="text-5xl font-bold mb-2">O placar</h2>
+                        <p class="text-xl text-secondary mb-10">Para onde foram os gols do Brasil 🇧🇷</p>
                         <div class="comparison-grid">
                             <div class="comparison-card">
                                 <h3 class="text-2xl font-bold mb-6 text-slate-600">Padrão K8s (L4)</h3>
                                 <div class="flex items-end justify-center gap-4 h-48 border-b border-slate-200">
+                                    <div class="w-16 rounded-t-md" style="height:6%;background:#E2E8F0;"></div>
+                                    <div class="w-16 rounded-t-md" style="height:6%;background:#E2E8F0;"></div>
                                     <div class="w-16 rounded-t-md" style="height:100%;background:#94A3B8;"></div>
-                                    <div class="w-16 rounded-t-md" style="height:5%;background:#E2E8F0;"></div>
-                                    <div class="w-16 rounded-t-md" style="height:5%;background:#E2E8F0;"></div>
                                 </div>
-                                <p class="mt-4 text-sm font-bold">1 Conexão = 1 Pod a 100%</p>
+                                <div class="flex justify-center gap-4 mt-2">
+                                    <div class="w-16 text-center"><div class="text-2xl">🇩🇪</div><div class="text-sm font-bold text-slate-400">0</div></div>
+                                    <div class="w-16 text-center"><div class="text-2xl">🇦🇷</div><div class="text-sm font-bold text-slate-400">0</div></div>
+                                    <div class="w-16 text-center"><div class="text-2xl">🇫🇷</div><div class="text-sm font-bold">87</div></div>
+                                </div>
+                                <p class="mt-4 text-sm font-bold">1 conexão = 1 seleção leva todos os gols</p>
                             </div>
                             <div class="comparison-card" style="border-top: 4px solid var(--stone-primary);">
                                 <h3 class="text-2xl font-bold mb-6 highlight-text">Service Mesh (L7)</h3>
@@ -1393,7 +1399,12 @@ spec:
                                     <div class="w-16 rounded-t-md" style="height:20%;background:rgba(0,172,215,0.45);"></div>
                                     <div class="w-16 rounded-t-md" style="height:20%;background:rgba(0,172,215,0.45);"></div>
                                 </div>
-                                <p class="mt-4 text-sm font-bold highlight-text">1 Conexão = Requests Distribuídos (60/20/20)</p>
+                                <div class="flex justify-center gap-4 mt-2">
+                                    <div class="w-16 text-center"><div class="text-2xl">🇩🇪</div><div class="text-sm font-bold highlight-text">45</div></div>
+                                    <div class="w-16 text-center"><div class="text-2xl">🇦🇷</div><div class="text-sm font-bold">15</div></div>
+                                    <div class="w-16 text-center"><div class="text-2xl">🇫🇷</div><div class="text-sm font-bold">14</div></div>
+                                </div>
+                                <p class="mt-4 text-sm font-bold highlight-text">1 conexão = gols distribuídos (60/20/20)</p>
                             </div>
                         </div>
                     </div>
@@ -1625,8 +1636,8 @@ spec:
             },
             {
                 arc: 'Arco 7 — Answer → New Bliss (~6 min)',
-                title: '7.3 — O contraste',
-                note: '"Isso não é só load balancing — observabilidade, mTLS, circuit breaking, retry. Tudo via YAML, zero código."',
+                title: '7.3 — O placar',
+                note: '"O placar não mente: sem mesh a França leva todos os gols; com mesh, 60/20/20. E não é só load balancing — observabilidade, mTLS, circuit breaking, retry. Tudo via YAML, zero código."',
                 transition: 'Fechamento — "o problema estava na camada. A solução estava na camada. O código Go não mudou".'
             },
             {
