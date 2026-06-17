@@ -1,0 +1,47 @@
+# Istio L7 traffic management — the heart of Arco 7. Mirrors slide 6.2 exactly.
+#
+# DestinationRule defines the load-balancing algorithm (ROUND_ROBIN) and the
+# three subsets, matched by the `version` label.
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: go-api
+spec:
+  host: go-api
+  trafficPolicy:
+    loadBalancer:
+      simple: ROUND_ROBIN
+  subsets:
+    - name: v1
+      labels: { version: v1 }
+    - name: v2
+      labels: { version: v2 }
+    - name: v3
+      labels: { version: v3 }
+---
+# VirtualService splits traffic 60/20/20 across the subsets, per request.
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: go-api
+spec:
+  hosts:
+    - go-api
+  http:
+    - route:
+        - destination: { host: go-api, subset: v1 }
+          weight: 60
+        - destination: { host: go-api, subset: v2 }
+          weight: 20
+        - destination: { host: go-api, subset: v3 }
+          weight: 20
+---
+# Honor "no TLS in any layer": disable Istio's automatic mTLS between sidecars.
+# This does NOT affect L7 load balancing — the 60/20/20 split works in cleartext.
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+spec:
+  mtls:
+    mode: DISABLE

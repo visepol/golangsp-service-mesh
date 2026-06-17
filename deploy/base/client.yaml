@@ -1,0 +1,23 @@
+# The load generator. One replica, reusing a single persistent h2c connection to
+# the go-api Service (in-cluster DNS, ClusterIP). Watch its logs to see which pod
+# answers each request.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-client
+  labels: { app: go-client }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: go-client }
+  template:
+    metadata:
+      labels: { app: go-client }
+    spec:
+      containers:
+        - name: go-client
+          image: go-client:local
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: SERVER_URL, value: "http://go-api:8080/api/v1/health" }
+            - { name: REQUEST_INTERVAL, value: "500ms" }

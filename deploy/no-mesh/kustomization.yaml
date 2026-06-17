@@ -1,0 +1,7 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Plain Kubernetes, no Istio. kube-proxy (L4) pins the client's single HTTP/2
+# connection to one pod => every response shows the SAME UUID. This is Arco 4.
+namespace: no-mesh
+resources:
+  - ../base

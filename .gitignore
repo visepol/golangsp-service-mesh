@@ -1,0 +1,5 @@
+# Vendored CLI tooling downloaded by `make bootstrap`.
+/bin/
+
+# Istio release extracted by istioctl bootstrap (if any).
+/istio-*/
