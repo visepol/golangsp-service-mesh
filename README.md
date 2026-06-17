@@ -5,10 +5,18 @@ persistente) **não distribui carga de verdade** porque o `kube-proxy` decide o
 destino **por conexão** (L4). A solução é um service mesh (Istio), que opera em
 **L7** e balanceia **por request**.
 
+Tema de Copa: o **cliente é o Brasil** e cada request/resposta é um **gol** contra
+a seleção adversária (cada pod do servidor é uma seleção, via env `TEAM`). O
+cliente mantém um **placar ao vivo**.
+
 | Cenário | Namespace | LB | Resultado |
 |--------|-----------|----|-----------|
-| Problema (Arco 4) | `no-mesh` | kube-proxy (L4) | **mesmo UUID** repetindo — 1 pod recebe tudo |
-| Solução (Arco 7) | `mesh` | Envoy / Istio (L7) | **3 UUIDs ~60/20/20** — balanceado por request |
+| Problema (Arco 4) | `no-mesh` | kube-proxy (L4) | Brasil só faz gol contra **UMA** seleção — goleada num pod só |
+| Solução (Arco 7) | `mesh` | Envoy / Istio (L7) | gols espalhados **~60/20/20** entre as 3 seleções — por request |
+
+Seleções (pesos fixos dos slides): **Alemanha 60%** (v1, revanche do 7x1),
+**Argentina 20%** (v2), **França 20%** (v3) — definidas na env `TEAM` de cada
+Deployment em `deploy/base/server.yaml`.
 
 > **Sem TLS em nenhuma camada.** O servidor fala **h2c** (HTTP/2 cleartext) e o
 > mTLS automático do Istio fica desligado (`PeerAuthentication: DISABLE`). O
@@ -34,40 +42,39 @@ make verify       # checagens: pods do mesh em 2/2 e porta do Service = http2
 make clean        # apaga o cluster e ./bin — host sem resíduo
 ```
 
-Saída esperada do `make demo-no-mesh`:
+Saída esperada do `make demo-no-mesh` (goleada num só):
 
 ```
-[200 OK] Responding from Pod: c339b
-[200 OK] Responding from Pod: c339b
-[200 OK] Responding from Pod: c339b
+⚽ GOL! Brasil x Alemanha  →  placar: Alemanha 85
+⚽ GOL! Brasil x Alemanha  →  placar: Alemanha 86
+⚽ GOL! Brasil x Alemanha  →  placar: Alemanha 87
 ```
 
-Saída esperada do `make demo-mesh`:
+Saída esperada do `make demo-mesh` (placar convergindo pra ~60/20/20):
 
 ```
-[200 OK] Responding from Pod: f5461
-[200 OK] Responding from Pod: 43f06
-[200 OK] Responding from Pod: f5461
-[200 OK] Responding from Pod: 7add1
-[200 OK] Responding from Pod: f5461
+⚽ GOL! Brasil x Argentina  →  placar: Alemanha 42  ·  Argentina 22  ·  França 17
+⚽ GOL! Brasil x Alemanha   →  placar: Alemanha 43  ·  Argentina 22  ·  França 17
+⚽ GOL! Brasil x França     →  placar: Alemanha 43  ·  Argentina 22  ·  França 18
 ```
 
-Para conferir a proporção acumulada:
+A última linha do log já é o placar acumulado. Para isolá-lo:
 
 ```bash
-KUBECONFIG=./bin/kubeconfig ./bin/kubectl -n mesh logs deploy/go-client \
-  | grep -oE 'Pod: [a-z0-9]+' | sort | uniq -c | sort -rn
+KUBECONFIG=./bin/kubeconfig ./bin/kubectl -n mesh logs deploy/go-client --tail=1
 ```
 
 ## Por que funciona
 
-- **Cliente** (`cmd/client`): reusa **UMA** conexão HTTP/2 (h2c) persistente
-  contra o Service `go-api` (DNS in-cluster, ClusterIP). É o reuso da conexão que
+- **Cliente** (`cmd/client`, o "Brasil"): reusa **UMA** conexão HTTP/2 (h2c)
+  persistente contra o Service `go-api` (DNS in-cluster, ClusterIP), e cada
+  resposta é um gol contra a seleção que respondeu. É o reuso da conexão que
   concentra a carga num pod quando não há mesh. **Não use `kubectl port-forward`**
   para o tráfego da demo — port-forward fixa 1 pod e mascara o comportamento real.
-- **Servidor** (`cmd/server`): gera um UUID no startup (identidade do pod) e o
-  devolve em `GET /api/v1/health`. São 3 Deployments (`v1/v2/v3`, 1 réplica cada),
-  então cada subset = 1 UUID estável.
+- **Servidor** (`cmd/server`): cada pod representa uma seleção (env `TEAM`) e a
+  devolve em `GET /api/v1/health` (com fallback p/ UUID se `TEAM` não for setado).
+  São 3 Deployments (`v1/v2/v3`, 1 réplica cada), então cada subset = 1 seleção
+  estável.
 - **no-mesh**: o `kube-proxy` faz NAT por conexão → a única conexão cai sempre no
   mesmo endpoint → mesmo UUID.
 - **mesh**: o sidecar Envoy lê os frames HTTP/2 (L7) e roteia cada request pelos
@@ -94,7 +101,7 @@ bin/                     # k3d, kubectl, istioctl, kubeconfig (gitignored)
 
 ## Troubleshooting
 
-- **mesh mostra 1 UUID só:** confirme `make verify` (porta `http2`, pods `2/2`).
+- **mesh faz gol só contra uma seleção:** confirme `make verify` (porta `http2`, pods `2/2`).
   Se os pods não estiverem `2/2`, a injeção do sidecar não pegou — `make dev`
   rotula o namespace `mesh` antes de criar os pods; rode `make down && make dev`.
 - **trocar k3d por kind:** o Makefile tem `CLUSTER_TOOL=k3d` no topo; as receitas

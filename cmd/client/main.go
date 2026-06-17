@@ -1,12 +1,14 @@
-// Command client is the load generator of the talk. It reuses a SINGLE
-// persistent HTTP/2 (h2c) connection and loops requests against the go-api
-// Service, printing which pod (UUID) answered each one.
+// Command client is the load generator of the talk — themed as Brazil scoring
+// goals. It reuses a SINGLE persistent HTTP/2 (h2c) connection and loops requests
+// against the go-api Service; each response is a goal against the opponent
+// (server pod) that answered. It keeps a running scoreboard so the audience can
+// read the load distribution as a scoreline.
 //
 // The single reused connection is the crux of the demo:
 //   - no-mesh: kube-proxy (L4) pins that one connection to one pod, so every
-//     request shows the SAME UUID — load is NOT balanced.
-//   - mesh: the Envoy sidecar reads the HTTP/2 frames (L7) and balances each
-//     request across pods per the VirtualService weights (60/20/20).
+//     goal goes against the SAME team — load is NOT balanced (a goleada).
+//   - mesh: the Envoy sidecar reads the HTTP/2 frames (L7) and spreads goals
+//     across teams per the VirtualService weights (60/20/20).
 //
 // It targets the in-cluster Service DNS directly (ClusterIP). Do NOT use
 // kubectl port-forward for this traffic — port-forward pins a single pod and
@@ -17,12 +19,14 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/net/http2"
@@ -30,12 +34,38 @@ import (
 
 type healthResponse struct {
 	Pod     string `json:"pod"`
+	Team    string `json:"team"`
 	Message string `json:"message"`
+}
+
+// scoreboard tallies goals per opponent, preserving first-seen order so the
+// printed line stays stable (no jitter) during the live demo.
+type scoreboard struct {
+	order []string
+	goals map[string]int
+}
+
+func newScoreboard() *scoreboard { return &scoreboard{goals: map[string]int{}} }
+
+func (s *scoreboard) add(team string) {
+	if _, ok := s.goals[team]; !ok {
+		s.order = append(s.order, team)
+	}
+	s.goals[team]++
+}
+
+func (s *scoreboard) String() string {
+	parts := make([]string, 0, len(s.order))
+	for _, t := range s.order {
+		parts = append(parts, fmt.Sprintf("%s %d", t, s.goals[t]))
+	}
+	return strings.Join(parts, "  ·  ")
 }
 
 func main() {
 	target := getenv("SERVER_URL", "http://go-api:8080/api/v1/health")
 	interval := getDuration("REQUEST_INTERVAL", 500*time.Millisecond)
+	myTeam := getenv("CLIENT_TEAM", "Brasil")
 
 	// A single http2.Transport in h2c mode. AllowHTTP + a DialTLSContext that
 	// returns a plain TCP connection gives us HTTP/2 cleartext with "prior
@@ -51,16 +81,17 @@ func main() {
 	}
 	client := &http.Client{Transport: transport, Timeout: 5 * time.Second}
 
-	log.Printf("go-client starting | target=%s | interval=%s", target, interval)
+	board := newScoreboard()
+	log.Printf("⚽ %s entra em campo | alvo=%s | intervalo=%s", myTeam, target, interval)
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for range ticker.C {
-		doRequest(client, target)
+		doRequest(client, target, myTeam, board)
 	}
 }
 
-func doRequest(client *http.Client, target string) {
+func doRequest(client *http.Client, target, myTeam string, board *scoreboard) {
 	resp, err := client.Get(target)
 	if err != nil {
 		log.Printf("[ERR] %v", err)
@@ -70,7 +101,7 @@ func doRequest(client *http.Client, target string) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("[ERR] reading body: %v", err)
+		log.Printf("[ERR] lendo resposta: %v", err)
 		return
 	}
 
@@ -80,12 +111,18 @@ func doRequest(client *http.Client, target string) {
 		return
 	}
 
-	// Match the slides' on-screen format: "[200 OK] Responding from Pod: <uuid>".
-	log.Printf("[%d %s] Responding from Pod: %s", resp.StatusCode, http.StatusText(resp.StatusCode), shorten(hr.Pod))
+	opponent := hr.Team
+	if opponent == "" {
+		opponent = shorten(hr.Pod)
+	}
+	board.add(opponent)
+
+	// "⚽ GOL! Brasil x Alemanha  →  placar: Alemanha 7  ·  Argentina 2  ·  França 2"
+	log.Printf("⚽ GOL! %s x %s  →  placar: %s", myTeam, opponent, board)
 }
 
-// shorten trims the UUID to the short form shown on the slides (e.g. a1b2c),
-// which stays unique across the three pods while being easy to read live.
+// shorten trims the UUID to the short form (e.g. a1b2c) — fallback identity when
+// a pod has no TEAM set, so the demo still works without the theme.
 func shorten(id string) string {
 	if len(id) >= 5 {
 		return id[:5]

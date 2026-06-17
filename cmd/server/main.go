@@ -25,8 +25,14 @@ import (
 // instance. Every response carries it so the client can tell pods apart.
 var podID = uuid.NewString()
 
+// team is the World Cup opponent this pod represents (set per Deployment via the
+// TEAM env var). It is the friendly identity shown on screen; falls back to a
+// short UUID when unset, so the demo still works without the theme.
+var team = getenv("TEAM", shorten(podID))
+
 type healthResponse struct {
 	Pod     string `json:"pod"`
+	Team    string `json:"team"`
 	Message string `json:"message"`
 }
 
@@ -49,7 +55,7 @@ func main() {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	log.Printf("go-api starting | pod=%s | h2c on :%s", podID, port)
+	log.Printf("go-api starting | team=%s | pod=%s | h2c on :%s", team, podID, port)
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
@@ -60,8 +66,17 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(healthResponse{
 		Pod:     podID,
-		Message: fmt.Sprintf("Hello from %s", podID),
+		Team:    team,
+		Message: fmt.Sprintf("Goleiro da %s respondeu", team),
 	})
+}
+
+// shorten trims the UUID to a short form used as a fallback identity.
+func shorten(id string) string {
+	if len(id) >= 5 {
+		return id[:5]
+	}
+	return id
 }
 
 func getenv(key, fallback string) string {

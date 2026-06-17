@@ -18,6 +18,8 @@ spec:
         - name: go-api
           image: go-api:local
           imagePullPolicy: IfNotPresent
+          env:
+            - { name: TEAM, value: "Alemanha" } # subset v1 — leva 60% (revanche do 7x1)
           ports:
             - { name: http2, containerPort: 8080 }
           readinessProbe:
@@ -41,6 +43,8 @@ spec:
         - name: go-api
           image: go-api:local
           imagePullPolicy: IfNotPresent
+          env:
+            - { name: TEAM, value: "Argentina" } # subset v2 — leva 20%
           ports:
             - { name: http2, containerPort: 8080 }
           readinessProbe:
@@ -64,6 +68,8 @@ spec:
         - name: go-api
           image: go-api:local
           imagePullPolicy: IfNotPresent
+          env:
+            - { name: TEAM, value: "França" } # subset v3 — leva 20%
           ports:
             - { name: http2, containerPort: 8080 }
           readinessProbe:
