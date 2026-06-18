@@ -659,10 +659,10 @@
                                 <i class="ph-bold ph-arrow-right text-2xl text-muted"></i>
                             </div>
 
-                            <!-- Ingress Nginx -->
+                            <!-- Service (ClusterIP) -->
                             <div class="p-5 bg-slate-100 border border-slate-200 rounded-xl flex flex-col items-center gap-2" style="min-width:130px;">
                                 <i class="ph-fill ph-hard-drives text-4xl highlight-text"></i>
-                                <div class="font-bold text-sm">Ingress Nginx</div>
+                                <div class="font-bold text-sm">Service (ClusterIP)</div>
                             </div>
 
                             <div class="flex flex-col items-center gap-1">
@@ -781,16 +781,16 @@
                     }
                 </style>
 
-                <!-- Slide 5: O que o ingress enxerga -->
+                <!-- Slide 5: O que o Service enxerga -->
                 <section class="slide text-center">
                     <div class="animated w-full max-w-5xl">
-                        <h2 class="text-5xl font-bold mb-8">O que o ingress enxerga</h2>
+                        <h2 class="text-5xl font-bold mb-8">O que o Service enxerga</h2>
 
                         <div class="comparison-grid items-stretch">
 
-                            <!-- Panel esquerdo: perspectiva do ingress -->
+                            <!-- Panel esquerdo: perspectiva do Service -->
                             <div class="flex flex-col items-center">
-                                <p class="text-xs font-bold uppercase tracking-widest mb-4" style="color:var(--text-secondary);">O ingress vê</p>
+                                <p class="text-xs font-bold uppercase tracking-widest mb-4" style="color:var(--text-secondary);">O Service vê</p>
 
                                 <div class="w-full flex flex-col items-center rounded-2xl py-6 px-6" style="background:#F8FAFC; border:1px solid #E2E8F0; flex:1;">
 
@@ -801,8 +801,8 @@
 
                                     <div style="width:2px;height:16px;background:#CBD5E1;"></div>
 
-                                    <!-- Ingress -->
-                                    <div class="flex items-center justify-center bg-white rounded-lg font-mono text-sm shadow-sm border-2" style="border-color:var(--stone-primary); padding:10px 20px; min-width:180px;">ingress nginx</div>
+                                    <!-- Service -->
+                                    <div class="flex items-center justify-center bg-white rounded-lg font-mono text-sm shadow-sm border-2" style="border-color:var(--stone-primary); padding:10px 20px; min-width:180px;">Service (ClusterIP)</div>
 
                                     <!-- Pods -->
                                     <div class="flex items-start justify-center gap-6 w-full mt-4">
@@ -844,8 +844,8 @@
 
                                     <div style="width:2px;height:16px;background:#CBD5E1;"></div>
 
-                                    <!-- Ingress (mesmo tamanho, mesmo estilo) -->
-                                    <div class="flex items-center justify-center bg-white rounded-lg font-mono text-sm shadow-sm border-2" style="border-color:var(--stone-primary); padding:10px 20px; min-width:180px;">ingress nginx</div>
+                                    <!-- Service (mesmo tamanho, mesmo estilo) -->
+                                    <div class="flex items-center justify-center bg-white rounded-lg font-mono text-sm shadow-sm border-2" style="border-color:var(--stone-primary); padding:10px 20px; min-width:180px;">Service (ClusterIP)</div>
 
                                     <!-- Pods -->
                                     <div class="flex items-start justify-center gap-6 w-full mt-4">
@@ -1010,7 +1010,7 @@
                 <section class="slide text-center">
                     <div class="animated w-full max-w-4xl">
                         <i class="ph-bold ph-package text-7xl text-slate-400 mb-6"></i>
-                        <h2 class="text-4xl font-bold mb-6">O que o Ingress enxerga em L4</h2>
+                        <h2 class="text-4xl font-bold mb-6">O que o Service enxerga em L4</h2>
                         <p class="text-2xl text-secondary max-w-2xl mx-auto mb-8">
                             Ele entrega pacotes TCP baseados em IP e Porta. O conteúdo (HTTP/2) é um <span class="font-bold text-slate-800">bloco opaco</span> de bytes cifrados.
                         </p>
@@ -1024,7 +1024,7 @@
                 <section class="slide text-center">
                     <div class="animated w-full max-w-4xl">
                         <h2 class="text-6xl font-black leading-tight">
-                            Não é o nginx.<br>
+                            Não é o Service.<br>
                             Não é a configuração.<br>
                             É a <span class="keyword-highlight">camada</span>.
                         </h2>
@@ -1586,8 +1586,8 @@ spec:
             },
             {
                 arc: 'Arco 2 — What Is → Complication (~6 min)',
-                title: '2.2 — O que o ingress enxerga',
-                note: 'Analogia da rodovia — ingress vê um carro, não sabe quantos passageiros estão dentro.',
+                title: '2.2 — O que o Service enxerga',
+                note: 'Analogia da rodovia — o Service vê um carro, não sabe quantos passageiros estão dentro.',
                 transition: 'Consequência — "o que acontece em produção quando a carga aumenta?"'
             },
             {
@@ -1605,18 +1605,18 @@ spec:
             {
                 arc: 'Arco 3 — Complication escalada (~5 min)',
                 title: '3.1 — A pilha OSI',
-                note: 'Recorte intencional (L1-L3, L5-L6 ignorados) + ponte ingress em L4 vs. Istio em L7.',
+                note: 'Recorte intencional (L1-L3, L5-L6 ignorados) + ponte Service em L4 vs. Istio em L7.',
                 transition: 'Afirmação — "L4 enxerga fluxo TCP. Não enxerga HTTP, requests ou headers."'
             },
             {
                 arc: 'Arco 3 — Complication escalada (~5 min)',
-                title: '3.2 — O que o ingress nginx enxerga',
+                title: '3.2 — O que o Service enxerga',
                 note: 'Analogia dos Correios — carteiro entrega pelo endereço, não abre o envelope.',
-                transition: 'Generalização — nginx, HAProxy, qualquer L4 tem o mesmo limite; a camada define o que é possível.'
+                transition: 'Generalização — Service, kube-proxy, qualquer balanceador L4 tem o mesmo limite; a camada define o que é possível.'
             },
             {
                 arc: 'Arco 3 — Complication escalada (~5 min)',
-                title: '3.3 — Não é o nginx, é a camada',
+                title: '3.3 — Não é o Service, é a camada',
                 note: 'Ponte para a solução — a solução não é corrigir o proxy, é operar em outra camada.',
                 transition: 'Ação — "vamos ver o problema ao vivo. O cliente é o Brasil; cada gol mostra contra qual seleção (pod) o request caiu."'
             },
@@ -1630,7 +1630,7 @@ spec:
                 arc: 'Arco 4 — STAR (~5 min)',
                 title: '4.2 — Terminal ao vivo',
                 note: 'Narração direta — "reparem no placar: todos os gols caem na mesma seleção (a França). As outras duas estão ociosas agora mesmo."',
-                transition: 'Diagnóstico — "a solução não está no código, não está no nginx — está em operar em outra camada".'
+                transition: 'Diagnóstico — "a solução não está no código, não está no Service — está em operar em outra camada".'
             },
             {
                 arc: 'Arco 5 — What Could Be (~7 min)',
