@@ -25,7 +25,10 @@ Deployment em `deploy/base/server.yaml`.
 
 ## Pré-requisitos
 
-- **Docker** (testado com 29.x). É o único requisito no host.
+- **Docker** (testado com 29.x). É o único requisito no host. Funciona em
+  **Linux e macOS** (incl. Apple Silicon); no macOS abra o **Docker Desktop**
+  antes de `make dev` (o `make` falha rápido com mensagem clara se ele não
+  estiver rodando).
 - Go, k3d, kubectl e istioctl **não** precisam estar instalados: o Go builda
   dentro de um container e as CLIs são baixadas para `./bin/` pelo `make`.
 - Versões pinadas em [`versions.env`](./versions.env).
