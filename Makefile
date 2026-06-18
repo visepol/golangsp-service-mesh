@@ -67,6 +67,9 @@ go.sum: go.mod ## Resolve Go deps (runs `go mod tidy` in a container).
 	  -v $(ROOT):/src -w /src golang:$(GO_VERSION) go mod tidy
 
 build: go.sum ## Build the server and client images via Docker.
+	# Offline-safe after the first online run: no `--pull`, so cached base images are
+	# reused, and the `go mod download` layer is keyed by go.mod/go.sum (unchanged code
+	# rebuilds hit the cache). A repeat `make dev` offline does no network I/O here.
 	docker build -f Dockerfile.server --build-arg GO_VERSION=$(GO_VERSION) -t $(SERVER_IMAGE) .
 	docker build -f Dockerfile.client --build-arg GO_VERSION=$(GO_VERSION) -t $(CLIENT_IMAGE) .
 
@@ -83,8 +86,13 @@ cluster-up: bootstrap ## Create the k3d cluster (idempotent) and write ./bin/kub
 	fi
 	@k3d kubeconfig get $(CLUSTER_NAME) > $(KUBECONFIG)
 
-istio-install: cluster-up ## Install Istio (minimal profile). Idempotent.
-	istioctl install --set profile=minimal -y
+istio-install: cluster-up ## Install Istio (minimal profile). Idempotent — skips (no network) if istiod already present.
+	@if kubectl -n istio-system get deploy istiod >/dev/null 2>&1; then \
+	  echo ">> istio already installed, skipping"; \
+	else \
+	  echo ">> installing istio $(ISTIO_VERSION)"; \
+	  istioctl install --set profile=minimal -y; \
+	fi
 
 images-import: build cluster-up ## Load the local images into the cluster.
 	k3d image import $(SERVER_IMAGE) $(CLIENT_IMAGE) -c $(CLUSTER_NAME)
